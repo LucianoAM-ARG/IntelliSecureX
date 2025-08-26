@@ -52,15 +52,13 @@ export class IntelXService {
 
   async search(term: string, type: 'domain' | 'ip' | 'email' | 'hash', isPremium: boolean = false): Promise<any> {
     try {
-      const searchParams: IntelXSearchParams = {
+      // Step 1: Initialize search
+      const searchParams = {
         term,
-        buckets: this.getBucketsForType(type),
-        lookuplevel: 0,
         maxresults: isPremium ? 1000 : 10,
-        timeout: 5,
-        sort: 4,
         media: 0,
-        terminate: [],
+        sort: 2,
+        terminate: []
       };
 
       const searchResponse = await fetch(`${this.config.baseUrl}/intelligent/search`, {
@@ -73,13 +71,35 @@ export class IntelXService {
       });
 
       if (!searchResponse.ok) {
+        const errorText = await searchResponse.text();
+        console.error('IntelX search init error:', searchResponse.status, errorText);
         throw new Error(`IntelX API error: ${searchResponse.status}`);
       }
 
-      const searchData: IntelXSearchResponse = await searchResponse.json();
+      const searchInit = await searchResponse.json();
+      
+      if (!searchInit.id) {
+        throw new Error('No search ID returned from IntelX');
+      }
+
+      // Step 2: Get search results
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=8`, {
+        method: 'GET',
+        headers: {
+          'x-key': this.config.apiKey,
+        },
+      });
+
+      if (!resultsResponse.ok) {
+        const errorText = await resultsResponse.text();
+        console.error('IntelX results error:', resultsResponse.status, errorText);
+        throw new Error(`IntelX API error: ${resultsResponse.status}`);
+      }
+
+      const searchData = await resultsResponse.json();
       
       return {
-        results: this.formatResults(searchData.records, type),
+        results: this.formatResults(searchData.records || [], type),
         total: searchData.statistics?.total || 0,
         buckets: searchData.statistics?.buckets || {},
       };
