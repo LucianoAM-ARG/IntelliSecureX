@@ -211,44 +211,72 @@ export class IntelXService {
   }
 
 
-  async getRecord(systemId: string, bucket: string): Promise<any> {
+  async getRecord(systemId: string, bucket: string): Promise<string> {
     try {
+      console.log(`Getting record: systemId=${systemId}, bucket=${bucket}`);
+      
       const proxyAgent = proxyManager.createProxyAgent();
       const fetchOptions: any = {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'x-key': this.config.apiKey,
         },
-        body: JSON.stringify({
-          type: 0,
-          systemid: systemId,
-          bucket,
-        }),
       };
 
       if (proxyAgent) {
         fetchOptions.agent = proxyAgent;
       }
 
-      const response = await fetch(`${this.config.baseUrl}/file/read`, fetchOptions);
+      // Try different endpoints for different bucket types
+      let url: string;
+      if (bucket.includes('web.')) {
+        // For web buckets, try the file/read endpoint
+        url = `${this.config.baseUrl}/file/read?type=0&storageid=${systemId}&bucket=${bucket}`;
+      } else {
+        // For other buckets, try the file/view endpoint
+        url = `${this.config.baseUrl}/file/view?f=0&k=${this.config.apiKey}&j=&t=0&h=0&c=${systemId}&b=${bucket}`;
+      }
+
+      console.log(`Trying URL: ${url}`);
+      const response = await fetch(url, fetchOptions);
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error('IntelX record fetch error:', response.status, errorText);
         
-        if (response.status === 429 || response.status === 403) {
-          console.log('Rate limited, forcing proxy rotation');
-          proxyManager.forceRotate();
+        // Try alternative endpoint if first one fails
+        if (bucket.includes('web.')) {
+          url = `${this.config.baseUrl}/file/view?f=0&k=${this.config.apiKey}&j=&t=0&h=0&c=${systemId}&b=${bucket}`;
+        } else {
+          url = `${this.config.baseUrl}/file/read?type=0&storageid=${systemId}&bucket=${bucket}`;
         }
         
-        throw new Error(`IntelX API error: ${response.status} - ${errorText}`);
+        console.log(`Trying alternative URL: ${url}`);
+        const retryResponse = await fetch(url, fetchOptions);
+        
+        if (!retryResponse.ok) {
+          const retryErrorText = await retryResponse.text();
+          console.error('IntelX retry fetch error:', retryResponse.status, retryErrorText);
+          
+          if (retryResponse.status === 429 || retryResponse.status === 403) {
+            console.log('Rate limited, forcing proxy rotation');
+            proxyManager.forceRotate();
+          }
+          
+          return `Content not available for this record. Error: ${retryResponse.status}`;
+        }
+        
+        const content = await retryResponse.text();
+        console.log(`Successfully retrieved content with alternative URL. Length: ${content.length}`);
+        return content;
       }
 
-      return await response.text();
+      const content = await response.text();
+      console.log(`Successfully retrieved content. Length: ${content.length}`);
+      return content;
     } catch (error) {
       console.error('IntelX record fetch error:', error);
-      throw new Error('Failed to fetch record details');
+      return `Failed to fetch record content: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   }
 }
