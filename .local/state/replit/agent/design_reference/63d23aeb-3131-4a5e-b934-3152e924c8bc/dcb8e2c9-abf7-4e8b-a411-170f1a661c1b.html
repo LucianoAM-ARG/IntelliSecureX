@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligence Security X - Professional OSINT Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    'inter': ['Inter', 'sans-serif'],
+                },
+                colors: {
+                    'primary': '#0EA5E9',
+                    'secondary': '#10B981',
+                    'accent': '#3B82F6',
+                    'warning': '#F59E0B',
+                    'danger': '#EF4444',
+                    'dark-primary': '#0F172A',
+                    'dark-secondary': '#1E293B',
+                    'dark-tertiary': '#334155',
+                }
+            }
+        }
+    };
+    </script>
+</head>
+<body class="bg-dark-primary text-slate-100 font-inter min-h-screen">
+    <!-- @COMPONENT: TelegramWebAppHeader -->
+    <div class="bg-dark-secondary border-b border-dark-tertiary sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-lg flex items-center justify-center">
+                        <i class="fas fa-shield-alt text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-white">Intelligence Security X</h1>
+                        <p class="text-xs text-slate-400">Professional OSINT Platform</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <!-- @STATE: userPlan:string = "free" -->
+                    <span class="px-2 py-1 text-xs font-medium bg-warning/20 text-warning rounded-full">FREE</span>
+                    <button data-event="click:openUserMenu" class="w-8 h-8 bg-dark-tertiary rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-slate-300 text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: TelegramWebAppHeader -->
+
+    <!-- @COMPONENT: MainContent -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        
+        <!-- @COMPONENT: SearchInterface -->
+        <div class="bg-dark-secondary rounded-xl p-6 shadow-lg border border-dark-tertiary">
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-white mb-2">Intelligence Search</h2>
+                <p class="text-slate-400">Search domains, IPs, emails, and more using advanced OSINT techniques</p>
+            </div>
+
+            <!-- Search Type Selector -->
+            <div class="mb-4">
+                <div class="flex flex-wrap gap-2" data-mock="true">
+                    <!-- @STATE: selectedSearchType:string = "domain" -->
+                    <button class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium" data-search-type="domain">
+                        <i class="fas fa-globe mr-2"></i>Domain
+                    </button>
+                    <button class="px-4 py-2 bg-dark-tertiary text-slate-300 rounded-lg text-sm font-medium hover:bg-dark-tertiary/80" data-search-type="ip">
+                        <i class="fas fa-server mr-2"></i>IP Address
+                    </button>
+                    <button class="px-4 py-2 bg-dark-tertiary text-slate-300 rounded-lg text-sm font-medium hover:bg-dark-tertiary/80" data-search-type="email">
+                        <i class="fas fa-envelope mr-2"></i>Email
+                    </button>
+                    <button class="px-4 py-2 bg-dark-tertiary text-slate-300 rounded-lg text-sm font-medium hover:bg-dark-tertiary/80" data-search-type="hash">
+                        <i class="fas fa-fingerprint mr-2"></i>Hash
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Input -->
+            <div class="relative mb-4">
+                <input type="text" 
+                       placeholder="Enter domain, IP, email, or hash..." 
+                       class="w-full px-4 py-3 bg-dark-primary border border-dark-tertiary rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                       data-bind="searchQuery">
+                <button class="absolute right-3 top-1/2 transform -translate-y-1/2 bg-primary hover:bg-primary/80 px-4 py-2 rounded-lg transition-colors"
+                        data-event="click:performSearch"
+                        data-implementation="Should validate input and call IntelX API">
+                    <i class="fas fa-search text-white"></i>
+                </button>
+            </div>
+
+            <!-- Free User Limitations -->
+            <div class="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4">
+                <div class="flex items-start space-x-3">
+                    <i class="fas fa-exclamation-triangle text-warning mt-0.5"></i>
+                    <div>
+                        <p class="text-warning font-medium text-sm">Free Account Limitations</p>
+                        <p class="text-slate-300 text-sm mt-1">
+                            You have <span class="font-bold text-warning" data-bind="remainingQueries">3</span> searches remaining today. 
+                            <button class="text-primary hover:underline ml-1" data-event="click:openUpgradeModal">Upgrade to Premium</button> for unlimited searches.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: SearchInterface -->
+
+        <!-- @COMPONENT: SearchResults -->
+        <div class="bg-dark-secondary rounded-xl p-6 shadow-lg border border-dark-tertiary" data-mock="true">
+            <div class="mb-4 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-white">Search Results</h3>
+                <span class="text-sm text-slate-400">Found 24 results in 1.2s</span>
+            </div>
+
+            <!-- Results List -->
+            <!-- @MAP: searchResults.map(result => ( -->
+            <div class="space-y-4">
+                <div class="bg-dark-primary border border-dark-tertiary rounded-lg p-4 hover:border-primary/30 transition-colors">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-globe text-primary"></i>
+                            <span class="text-white font-medium" data-bind="result.domain">example.com</span>
+                            <span class="px-2 py-1 bg-secondary/20 text-secondary text-xs rounded-full">Active</span>
+                        </div>
+                        <span class="text-xs text-slate-400" data-bind="result.lastSeen">2 days ago</span>
+                    </div>
+                    <div class="text-sm text-slate-300 space-y-1">
+                        <p><span class="text-slate-400">IP:</span> <span data-bind="result.ip">192.168.1.100</span></p>
+                        <p><span class="text-slate-400">Location:</span> <span data-bind="result.location">United States, California</span></p>
+                        <p><span class="text-slate-400">ASN:</span> <span data-bind="result.asn">AS13335 Cloudflare</span></p>
+                    </div>
+                    <div class="mt-3 flex items-center space-x-3">
+                        <button class="text-primary hover:text-primary/80 text-sm flex items-center space-x-1">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>View Details</span>
+                        </button>
+                        <button class="text-slate-400 hover:text-slate-200 text-sm flex items-center space-x-1">
+                            <i class="fas fa-download"></i>
+                            <span>Export</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-dark-primary border border-dark-tertiary rounded-lg p-4 hover:border-primary/30 transition-colors">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-envelope text-secondary"></i>
+                            <span class="text-white font-medium" data-bind="result.email">admin@example.com</span>
+                            <span class="px-2 py-1 bg-danger/20 text-danger text-xs rounded-full">Breach</span>
+                        </div>
+                        <span class="text-xs text-slate-400" data-bind="result.lastSeen">1 week ago</span>
+                    </div>
+                    <div class="text-sm text-slate-300 space-y-1">
+                        <p><span class="text-slate-400">Domain:</span> <span data-bind="result.domain">example.com</span></p>
+                        <p><span class="text-slate-400">Breach:</span> <span data-bind="result.breach">DataBreach2023</span></p>
+                        <p><span class="text-slate-400">Risk Level:</span> <span class="text-danger" data-bind="result.risk">High</span></p>
+                    </div>
+                    <div class="mt-3 flex items-center space-x-3">
+                        <button class="text-primary hover:text-primary/80 text-sm flex items-center space-x-1">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Security Report</span>
+                        </button>
+                        <button class="text-slate-400 hover:text-slate-200 text-sm flex items-center space-x-1">
+                            <i class="fas fa-bell"></i>
+                            <span>Monitor</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Premium Content Teaser -->
+                <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-lg p-4 relative overflow-hidden">
+                    <div class="absolute inset-0 bg-dark-primary/60 backdrop-blur-sm flex items-center justify-center">
+                        <div class="text-center">
+                            <i class="fas fa-crown text-warning text-2xl mb-2"></i>
+                            <p class="text-white font-medium mb-2">Premium Results Available</p>
+                            <p class="text-slate-300 text-sm mb-3">Unlock 18 additional results with deep analysis</p>
+                            <button class="bg-gradient-to-r from-primary to-secondary px-6 py-2 rounded-lg text-white font-medium hover:from-primary/80 hover:to-secondary/80 transition-colors"
+                                    data-event="click:openUpgradeModal">
+                                Upgrade Now
+                            </button>
+                        </div>
+                    </div>
+                    <div class="blur-sm">
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center space-x-2">
+                                <i class="fas fa-server text-accent"></i>
+                                <span class="text-white font-medium">192.168.1.***</span>
+                                <span class="px-2 py-1 bg-accent/20 text-accent text-xs rounded-full">Premium</span>
+                            </div>
+                        </div>
+                        <div class="text-sm text-slate-300 space-y-1">
+                            <p><span class="text-slate-400">Ports:</span> <span>***,***,***</span></p>
+                            <p><span class="text-slate-400">Services:</span> <span>**** *** ****</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_MAP )) -->
+        </div>
+        <!-- @END_COMPONENT: SearchResults -->
+
+        <!-- @COMPONENT: QueryHistory -->
+        <div class="bg-dark-secondary rounded-xl p-6 shadow-lg border border-dark-tertiary">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">Recent Searches</h3>
+                <button class="text-slate-400 hover:text-slate-200 text-sm">
+                    <i class="fas fa-trash-alt mr-1"></i>Clear History
+                </button>
+            </div>
+            
+            <!-- @MAP: searchHistory.map(query => ( -->
+            <div class="space-y-2" data-mock="true">
+                <div class="flex items-center justify-between py-2 px-3 bg-dark-primary rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-globe text-primary text-sm"></i>
+                        <span class="text-white text-sm" data-bind="query.term">google.com</span>
+                        <span class="text-xs text-slate-400" data-bind="query.type">Domain</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-slate-400" data-bind="query.timestamp">2 hours ago</span>
+                        <button class="text-primary hover:text-primary/80" data-event="click:repeatSearch">
+                            <i class="fas fa-redo text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between py-2 px-3 bg-dark-primary rounded-lg">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-envelope text-secondary text-sm"></i>
+                        <span class="text-white text-sm" data-bind="query.term">test@domain.com</span>
+                        <span class="text-xs text-slate-400" data-bind="query.type">Email</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-slate-400" data-bind="query.timestamp">1 day ago</span>
+                        <button class="text-primary hover:text-primary/80" data-event="click:repeatSearch">
+                            <i class="fas fa-redo text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- @END_MAP )) -->
+        </div>
+        <!-- @END_COMPONENT: QueryHistory -->
+
+        <!-- @COMPONENT: PremiumBanner -->
+        <div class="bg-gradient-to-r from-primary to-secondary rounded-xl p-6 shadow-lg">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-white text-xl font-bold mb-2">Unlock Premium Intelligence</h3>
+                    <p class="text-slate-200 mb-4">Get unlimited searches, advanced filters, API access, and priority support</p>
+                    <ul class="text-slate-200 text-sm space-y-1 mb-4">
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2"></i>Unlimited daily searches</li>
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2"></i>Advanced threat intelligence</li>
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2"></i>API access & integrations</li>
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2"></i>Priority support</li>
+                    </ul>
+                </div>
+                <div class="text-center">
+                    <div class="mb-4">
+                        <span class="text-3xl font-bold text-white">$29</span>
+                        <span class="text-slate-200">/month</span>
+                    </div>
+                    <button class="bg-white text-primary px-6 py-3 rounded-lg font-semibold hover:bg-slate-100 transition-colors"
+                            data-event="click:openUpgradeModal"
+                            data-implementation="Should open Stripe checkout">
+                        Start Premium Trial
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- @END_COMPONENT: PremiumBanner -->
+    </div>
+    <!-- @END_COMPONENT: MainContent -->
+
+    <!-- @COMPONENT: UpgradeModal -->
+    <div id="upgradeModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 hidden" data-mock="true">
+        <div class="bg-dark-secondary rounded-xl p-8 max-w-md w-full mx-4 border border-dark-tertiary">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full mx-auto mb-4 flex items-center justify-center">
+                    <i class="fas fa-crown text-white text-2xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-2">Upgrade to Premium</h2>
+                <p class="text-slate-400">Unlock the full power of Intelligence Security X</p>
+            </div>
+
+            <div class="space-y-4 mb-6">
+                <div class="bg-dark-primary rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-white font-medium">Monthly Plan</span>
+                        <span class="text-primary font-bold text-xl">$29</span>
+                    </div>
+                    <ul class="text-sm text-slate-300 space-y-1">
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2 text-xs"></i>Unlimited searches</li>
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2 text-xs"></i>Advanced analytics</li>
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2 text-xs"></i>API access</li>
+                        <li class="flex items-center"><i class="fas fa-check text-secondary mr-2 text-xs"></i>Priority support</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-gradient-to-r from-primary/10 to-secondary/10 border border-primary/20 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-white font-medium">Annual Plan</span>
+                            <span class="bg-secondary px-2 py-1 text-xs font-medium rounded-full text-white">Save 25%</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-slate-400 line-through text-sm">$348</span>
+                            <span class="text-primary font-bold text-xl ml-2">$261</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-300">$21.75/month - Best value</p>
+                </div>
+            </div>
+
+            <div class="flex space-x-3">
+                <button class="flex-1 bg-dark-tertiary text-white py-3 rounded-lg font-medium hover:bg-dark-tertiary/80 transition-colors"
+                        data-event="click:closeUpgradeModal">
+                    Cancel
+                </button>
+                <button class="flex-1 bg-gradient-to-r from-primary to-secondary text-white py-3 rounded-lg font-medium hover:from-primary/80 hover:to-secondary/80 transition-colors"
+                        data-event="click:processPayment"
+                        data-implementation="Should integrate with Stripe payment processing">
+                    Subscribe Now
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: UpgradeModal -->
+
+    <!-- @COMPONENT: FloatingActionButton -->
+    <div class="fixed bottom-4 right-4 z-40">
+        <button class="w-14 h-14 bg-gradient-to-r from-primary to-secondary rounded-full shadow-lg flex items-center justify-center text-white hover:from-primary/80 hover:to-secondary/80 transition-all transform hover:scale-105"
+                data-event="click:openQuickSearch"
+                data-implementation="Should open quick search overlay">
+            <i class="fas fa-search text-lg"></i>
+        </button>
+    </div>
+    <!-- @END_COMPONENT: FloatingActionButton -->
+
+    <script>
+    // Basic interaction handling for demo purposes
+    (function() {
+        // TODO: Implement Telegram WebApp integration
+        // TODO: Implement IntelX API calls
+        // TODO: Implement Stripe payment processing
+        // TODO: Implement real-time search functionality
+        // TODO: Implement user authentication and session management
+        
+        // Modal handling
+        const upgradeModal = document.getElementById('upgradeModal');
+        
+        // Open modal handlers
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-event*="openUpgradeModal"]')) {
+                upgradeModal?.classList.remove('hidden');
+            }
+        });
+        
+        // Close modal handlers
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-event*="closeUpgradeModal"]') || 
+                (e.target === upgradeModal)) {
+                upgradeModal?.classList.add('hidden');
+            }
+        });
+        
+        // Search type selector
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-search-type]')) {
+                // Remove active state from all buttons
+                document.querySelectorAll('[data-search-type]').forEach(btn => {
+                    btn.className = btn.className.replace('bg-primary text-white', 'bg-dark-tertiary text-slate-300');
+                });
+                
+                // Add active state to clicked button
+                e.target.className = e.target.className.replace('bg-dark-tertiary text-slate-300', 'bg-primary text-white');
+            }
+        });
+
+        // Simulate loading states and search functionality
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[data-event*="performSearch"]')) {
+                const button = e.target;
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin text-white"></i>';
+                button.disabled = true;
+                
+                // Simulate search delay
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                    button.disabled = false;
+                    // TODO: Display actual search results from IntelX API
+                }, 2000);
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
