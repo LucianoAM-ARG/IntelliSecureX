@@ -64,3 +64,21 @@ export const insertSearchQuerySchema = createInsertSchema(searchQueries).pick({
 
 export type InsertSearchQuery = z.infer<typeof insertSearchQuerySchema>;
 export type SearchQuery = typeof searchQueries.$inferSelect;
+
+// Crypto payments table
+export const cryptoPayments = pgTable("crypto_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  cryptoType: varchar("crypto_type").notNull(), // bitcoin, ethereum, litecoin, etc
+  amountUsd: integer("amount_usd").notNull(), // price in cents USD
+  cryptoAmount: varchar("crypto_amount").notNull(), // amount in crypto
+  paymentAddress: varchar("payment_address").notNull(),
+  status: varchar("status").default("pending").notNull(), // pending, confirmed, failed, expired
+  transactionHash: varchar("transaction_hash"),
+  expiresAt: timestamp("expires_at").notNull(),
+  confirmedAt: timestamp("confirmed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export type CryptoPayment = typeof cryptoPayments.$inferSelect;
+export type InsertCryptoPayment = typeof cryptoPayments.$inferInsert;

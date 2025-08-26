@@ -1,10 +1,13 @@
 import {
   users,
   searchQueries,
+  cryptoPayments,
   type User,
   type UpsertUser,
   type SearchQuery,
   type InsertSearchQuery,
+  type CryptoPayment,
+  type InsertCryptoPayment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, gte, sql } from "drizzle-orm";
@@ -22,6 +25,12 @@ export interface IStorage {
   createSearchQuery(userId: string, query: InsertSearchQuery): Promise<SearchQuery>;
   getUserSearchHistory(userId: string, limit?: number): Promise<SearchQuery[]>;
   getSearchQuery(id: string): Promise<SearchQuery | undefined>;
+  
+  // Crypto payment operations
+  createCryptoPayment(payment: InsertCryptoPayment): Promise<CryptoPayment>;
+  getCryptoPayment(id: string): Promise<CryptoPayment | undefined>;
+  updateCryptoPaymentStatus(id: string, status: string, transactionHash?: string): Promise<CryptoPayment>;
+  getUserCryptoPayments(userId: string): Promise<CryptoPayment[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -134,6 +143,45 @@ export class DatabaseStorage implements IStorage {
       .from(searchQueries)
       .where(eq(searchQueries.id, id));
     return query;
+  }
+
+  // Crypto payment operations
+  async createCryptoPayment(payment: InsertCryptoPayment): Promise<CryptoPayment> {
+    const [createdPayment] = await db
+      .insert(cryptoPayments)
+      .values(payment)
+      .returning();
+    return createdPayment;
+  }
+
+  async getCryptoPayment(id: string): Promise<CryptoPayment | undefined> {
+    const [payment] = await db.select().from(cryptoPayments).where(eq(cryptoPayments.id, id));
+    return payment;
+  }
+
+  async updateCryptoPaymentStatus(id: string, status: string, transactionHash?: string): Promise<CryptoPayment> {
+    const updateData: any = { status };
+    if (transactionHash) {
+      updateData.transactionHash = transactionHash;
+    }
+    if (status === 'confirmed') {
+      updateData.confirmedAt = new Date();
+    }
+
+    const [payment] = await db
+      .update(cryptoPayments)
+      .set(updateData)
+      .where(eq(cryptoPayments.id, id))
+      .returning();
+    return payment;
+  }
+
+  async getUserCryptoPayments(userId: string): Promise<CryptoPayment[]> {
+    return await db
+      .select()
+      .from(cryptoPayments)
+      .where(eq(cryptoPayments.userId, userId))
+      .orderBy(desc(cryptoPayments.createdAt));
   }
 }
 

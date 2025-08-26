@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Crown, Copy, CheckCircle, X, Bitcoin, AlertCircle } from "lucide-react";
+import { Crown, Copy, CheckCircle, X, Bitcoin, AlertCircle, DollarSign } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,16 +21,57 @@ interface CryptoPaymentModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CryptoOption {
+  id: string;
+  name: string;
+  symbol: string;
+  icon: string;
+  priceUsd: number;
+}
+
 export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPaymentModalProps) {
-  const [step, setStep] = useState<'create' | 'payment' | 'verify'>('create');
+  const [step, setStep] = useState<'select' | 'payment' | 'verify'>('select');
+  const [selectedCrypto, setSelectedCrypto] = useState<string>('');
+  const [cryptoOptions, setCryptoOptions] = useState<CryptoOption[]>([]);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [txHash, setTxHash] = useState('');
+  const [isLoadingPrices, setIsLoadingPrices] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // Cargar precios de criptomonedas al abrir el modal
+  useEffect(() => {
+    if (open && step === 'select') {
+      loadCryptoPrices();
+    }
+  }, [open, step]);
+
+  const loadCryptoPrices = async () => {
+    setIsLoadingPrices(true);
+    try {
+      const response = await apiRequest('GET', '/api/crypto/prices');
+      const prices = await response.json();
+      setCryptoOptions(prices);
+      if (prices.length > 0) {
+        setSelectedCrypto(prices[0].id); // Seleccionar Bitcoin por defecto
+      }
+    } catch (error) {
+      console.error('Error loading crypto prices:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los precios de las criptomonedas',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingPrices(false);
+    }
+  };
+
   const createPaymentMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/crypto/create-payment");
+      const response = await apiRequest("POST", "/api/crypto/create-payment", {
+        cryptoType: selectedCrypto
+      });
       return await response.json();
     },
     onSuccess: (data) => {
@@ -70,7 +112,7 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
       queryClient.invalidateQueries({ queryKey: ["/api/subscription/status"] });
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       onOpenChange(false);
-      setStep('create');
+      setStep('select');
       setPaymentData(null);
       setTxHash('');
     },
@@ -97,7 +139,9 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
 
   const handleClose = () => {
     onOpenChange(false);
-    setStep('create');
+    setStep('select');
+    setSelectedCrypto('');
+    setCryptoOptions([]);
     setPaymentData(null);
     setTxHash('');
   };
@@ -111,7 +155,31 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
   };
 
   const handleCreatePayment = () => {
+    if (!selectedCrypto) {
+      toast({
+        title: 'Selecciona una criptomoneda',
+        description: 'Por favor selecciona una criptomoneda para continuar',
+        variant: 'destructive',
+      });
+      return;
+    }
     createPaymentMutation.mutate();
+  };
+
+  const getSelectedCryptoInfo = () => {
+    return cryptoOptions.find(crypto => crypto.id === selectedCrypto);
+  };
+
+  const getCryptoIcon = (symbol: string) => {
+    const icons: Record<string, string> = {
+      'BTC': '₿',
+      'ETH': 'Ξ',
+      'LTC': 'Ł',
+      'BCH': '₿',
+      'DOGE': 'Ð',
+      'XMR': 'ɱ',
+    };
+    return icons[symbol] || '₿';
   };
 
   const handleVerifyPayment = () => {
@@ -148,36 +216,76 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
           </div>
         </DialogHeader>
 
-        {step === 'create' && (
+        {step === 'select' && (
           <>
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full mx-auto mb-4 flex items-center justify-center">
                 <Crown className="w-8 h-8 text-white" />
               </div>
-              <p className="text-slate-400">Pay with cryptocurrency to unlock unlimited searches</p>
+              <h3 className="text-xl font-bold text-white mb-2">Selecciona tu Criptomoneda</h3>
+              <p className="text-slate-400">Paga con cualquier criptomoneda para desbloquear búsquedas ilimitadas</p>
             </div>
 
             <Card className="bg-dark-primary border-dark-tertiary mb-6">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-white font-medium">Premium Monthly</span>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-white font-medium">Premium Mensual</span>
                   <div className="flex items-center space-x-2">
-                    <Bitcoin className="w-4 h-4 text-warning" />
-                    <span className="text-primary font-bold text-xl">0.001 BTC</span>
+                    <DollarSign className="w-4 h-4 text-green-500" />
+                    <span className="text-green-500 font-bold text-xl">$29 USD</span>
                   </div>
                 </div>
+                
+                <div className="mb-4">
+                  <label className="text-sm text-slate-400 mb-2 block">Seleccionar Criptomoneda:</label>
+                  {isLoadingPrices ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      <span className="ml-2 text-slate-400">Cargando precios...</span>
+                    </div>
+                  ) : (
+                    <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                      <SelectTrigger className="bg-dark-secondary border-dark-tertiary text-white">
+                        <SelectValue placeholder="Selecciona una criptomoneda" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-dark-secondary border-dark-tertiary">
+                        {cryptoOptions.map((crypto) => {
+                          const cryptoAmount = (29 / crypto.priceUsd);
+                          const formattedAmount = crypto.symbol === 'DOGE' ? cryptoAmount.toFixed(0) : 
+                                                crypto.symbol === 'BTC' ? cryptoAmount.toFixed(6) :
+                                                crypto.symbol === 'ETH' ? cryptoAmount.toFixed(4) :
+                                                cryptoAmount.toFixed(4);
+                          return (
+                            <SelectItem key={crypto.id} value={crypto.id} className="text-white hover:bg-dark-tertiary">
+                              <div className="flex items-center justify-between w-full">
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-lg font-mono">{getCryptoIcon(crypto.symbol)}</span>
+                                  <span>{crypto.name} ({crypto.symbol})</span>
+                                </div>
+                                <span className="text-primary font-mono text-sm ml-4">
+                                  {formattedAmount} {crypto.symbol}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                
                 <div className="text-xs text-slate-300 space-y-1">
                   <div className="flex items-center space-x-1">
                     <CheckCircle className="w-3 h-3 text-secondary flex-shrink-0" />
-                    <span>Unlimited searches</span>
+                    <span>Búsquedas ilimitadas</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <CheckCircle className="w-3 h-3 text-secondary flex-shrink-0" />
-                    <span>Advanced analytics</span>
+                    <span>Análisis avanzados</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <CheckCircle className="w-3 h-3 text-secondary flex-shrink-0" />
-                    <span>Priority support</span>
+                    <span>Soporte prioritario</span>
                   </div>
                 </div>
               </CardContent>
@@ -185,17 +293,17 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
 
             <Button 
               onClick={handleCreatePayment}
-              disabled={createPaymentMutation.isPending}
+              disabled={createPaymentMutation.isPending || !selectedCrypto || isLoadingPrices}
               className="w-full bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80"
               data-testid="button-create-payment"
             >
               {createPaymentMutation.isPending ? (
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span>Creating Payment...</span>
+                  <span>Creando Pago...</span>
                 </div>
               ) : (
-                "Create Payment"
+                `Continuar con ${getSelectedCryptoInfo()?.symbol || 'Crypto'}`
               )}
             </Button>
           </>
@@ -205,24 +313,25 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
           <>
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-warning/20 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <Bitcoin className="w-8 h-8 text-warning" />
+                <span className="text-2xl font-mono">{paymentData?.cryptoSymbol && getCryptoIcon(paymentData.cryptoSymbol)}</span>
               </div>
-              <p className="text-slate-400">Send Bitcoin to the address below</p>
+              <p className="text-slate-400">Envía {paymentData?.cryptoName} a la dirección de abajo</p>
             </div>
 
             <Card className="bg-dark-primary border-dark-tertiary mb-4">
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div>
-                    <div className="text-sm text-slate-400 mb-1">Amount</div>
+                    <div className="text-sm text-slate-400 mb-1">Cantidad</div>
                     <div className="flex items-center space-x-2">
-                      <Bitcoin className="w-4 h-4 text-warning" />
-                      <span className="text-white font-mono">{paymentData.amount} BTC</span>
+                      <span className="text-lg font-mono">{paymentData?.cryptoSymbol && getCryptoIcon(paymentData.cryptoSymbol)}</span>
+                      <span className="text-white font-mono">{paymentData.cryptoAmount} {paymentData.cryptoSymbol}</span>
                     </div>
+                    <div className="text-xs text-slate-500 mt-1">≈ ${paymentData.usdAmount} USD</div>
                   </div>
                   
                   <div>
-                    <div className="text-sm text-slate-400 mb-1">Payment Address</div>
+                    <div className="text-sm text-slate-400 mb-1">Dirección de Pago</div>
                     <div className="flex items-center space-x-2">
                       <span className="text-white font-mono text-sm break-all">{paymentData.paymentAddress}</span>
                       <Button
@@ -243,7 +352,7 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
             <Alert className="bg-warning/10 border-warning/20 mb-4">
               <AlertCircle className="w-4 h-4 text-warning" />
               <AlertDescription className="text-warning text-sm">
-                Payment expires in 24 hours. Send the exact amount to the address above.
+                El pago expira en 24 horas. Envía la cantidad exacta a la dirección de arriba.
               </AlertDescription>
             </Alert>
 
@@ -252,7 +361,7 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
               className="w-full bg-dark-tertiary hover:bg-dark-tertiary/80 text-slate-300"
               data-testid="button-payment-sent"
             >
-              I've Sent the Payment
+              Ya Envié el Pago
             </Button>
           </>
         )}
@@ -263,15 +372,15 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
               <div className="w-16 h-16 bg-secondary/20 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-secondary" />
               </div>
-              <p className="text-slate-400">Enter your transaction hash to verify payment</p>
+              <p className="text-slate-400">Ingresa el hash de tu transacción para verificar el pago</p>
             </div>
 
             <div className="space-y-4 mb-6">
               <div>
-                <div className="text-sm text-slate-400 mb-2">Transaction Hash</div>
+                <div className="text-sm text-slate-400 mb-2">Hash de Transacción</div>
                 <Input
                   type="text"
-                  placeholder="Enter the transaction hash from your wallet..."
+                  placeholder="Ingresa el hash de la transacción de tu wallet..."
                   value={txHash}
                   onChange={(e) => setTxHash(e.target.value)}
                   className="bg-dark-primary border-dark-tertiary text-white placeholder-slate-500"
@@ -287,7 +396,7 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
                 className="flex-1 border-dark-tertiary text-slate-300 hover:bg-dark-tertiary"
                 data-testid="button-back"
               >
-                Back
+                Volver
               </Button>
               <Button 
                 onClick={handleVerifyPayment}
@@ -298,10 +407,10 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
                 {verifyPaymentMutation.isPending ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Verifying...</span>
+                    <span>Verificando...</span>
                   </div>
                 ) : (
-                  "Verify Payment"
+                  "Verificar Pago"
                 )}
               </Button>
             </div>

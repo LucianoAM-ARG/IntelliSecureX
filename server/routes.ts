@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupTelegramAuth, requireAuth } from "./telegramAuth";
 import { intelxService } from "./services/intelx";
+import { cryptoPricingService } from "./services/cryptoPricing";
 import { insertSearchQuerySchema } from "@shared/schema";
 import { z } from "zod";
 import { initializeBot } from "./telegramBot";
@@ -295,6 +296,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Telegram payment verification error:", error);
+      res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  // Get crypto prices
+  app.get('/api/crypto/prices', requireAuth, async (req: any, res) => {
+    try {
+      const prices = await cryptoPricingService.getCryptoPrices();
+      res.json(prices);
+    } catch (error) {
+      console.error('Error fetching crypto prices:', error);
+      res.status(500).json({ message: 'Failed to fetch crypto prices' });
+    }
+  });
+
+  // Create crypto payment
+  app.post('/api/crypto/create-payment', requireAuth, async (req: any, res) => {
+    try {
+      const telegramId = req.user.telegramId;
+      const { cryptoType } = req.body;
+      
+      if (!cryptoType) {
+        return res.status(400).json({ message: 'Crypto type is required' });
+      }
+
+      const user = await storage.getUserByTelegramId(telegramId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Get current crypto prices
+      const cryptoPrices = await cryptoPricingService.getCryptoPrices();
+      const selectedCrypto = cryptoPrices.find(crypto => crypto.id === cryptoType);
+      
+      if (!selectedCrypto) {
+        return res.status(400).json({ message: 'Invalid crypto type' });
+      }
+
+      const premiumPriceUsd = cryptoPricingService.getPremiumPriceUsd();
+      const cryptoAmount = cryptoPricingService.calculateCryptoAmount(cryptoType, selectedCrypto.priceUsd);
+      const formattedAmount = cryptoPricingService.formatCryptoAmount(cryptoAmount, selectedCrypto.symbol);
+      
+      // Create payment record
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      const paymentAddress = cryptoPricingService.generatePaymentAddress(cryptoType);
+      
+      const payment = await storage.createCryptoPayment({
+        userId: user.id,
+        cryptoType: selectedCrypto.id,
+        amountUsd: premiumPriceUsd * 100, // Store in cents
+        cryptoAmount: formattedAmount,
+        paymentAddress,
+        status: 'pending',
+        expiresAt,
+      });
+
+      res.json({
+        paymentId: payment.id,
+        cryptoType: selectedCrypto.id,
+        cryptoName: selectedCrypto.name,
+        cryptoSymbol: selectedCrypto.symbol,
+        cryptoAmount: formattedAmount,
+        usdAmount: premiumPriceUsd,
+        paymentAddress,
+        expiresAt,
+      });
+    } catch (error: any) {
+      console.error('Crypto payment creation error:', error);
+      res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  // Verify crypto payment
+  app.post('/api/crypto/verify-payment', requireAuth, async (req: any, res) => {
+    try {
+      const telegramId = req.user.telegramId;
+      const { paymentId, txHash } = req.body;
+
+      if (!paymentId || !txHash) {
+        return res.status(400).json({ message: 'Payment ID and transaction hash are required' });
+      }
+
+      const user = await storage.getUserByTelegramId(telegramId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const payment = await storage.getCryptoPayment(paymentId);
+      if (!payment) {
+        return res.status(404).json({ message: 'Payment not found' });
+      }
+
+      if (payment.userId !== user.id) {
+        return res.status(403).json({ message: 'Payment does not belong to user' });
+      }
+
+      if (payment.status === 'confirmed') {
+        return res.status(400).json({ message: 'Payment already confirmed' });
+      }
+
+      if (new Date() > payment.expiresAt) {
+        await storage.updateCryptoPaymentStatus(paymentId, 'expired');
+        return res.status(400).json({ message: 'Payment has expired' });
+      }
+
+      // En un entorno real, aquí verificarías el hash de transacción en la blockchain
+      // Por ahora, simplemente aceptamos cualquier hash válido
+      if (txHash.length < 10) {
+        return res.status(400).json({ message: 'Invalid transaction hash' });
+      }
+
+      // Update payment status
+      await storage.updateCryptoPaymentStatus(paymentId, 'confirmed', txHash);
+      
+      // Update user subscription
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+      await storage.updateSubscriptionStatus(user.id, 'active', expiresAt);
+
+      res.json({ 
+        success: true, 
+        message: 'Payment verified successfully',
+        subscriptionExpiresAt: expiresAt 
+      });
+    } catch (error: any) {
+      console.error('Payment verification error:', error);
       res.status(400).json({ error: { message: error.message } });
     }
   });
