@@ -44,7 +44,8 @@ export class IntelXService {
   private config: IntelXConfig;
 
   constructor() {
-    const apiKey = process.env.INTELX_API_KEY || 'b725faf7-b146-474e-8bee-5164e3ab7c61';
+    // Use the free API key specifically for free.intelx.io
+    const apiKey = 'b725faf7-b146-474e-8bee-5164e3ab7c61';
 
     this.config = {
       apiKey,
@@ -54,14 +55,13 @@ export class IntelXService {
 
   async search(term: string, type: 'domain' | 'ip' | 'email' | 'hash', isPremium: boolean = false): Promise<any> {
     try {
-      // Step 1: Initialize search
+      // Step 1: Initialize search (simplified for free API)
       const searchParams = {
         term,
-        maxresults: isPremium ? 1000 : 15,
+        maxresults: 10,
         media: 0,
         sort: 2,
-        terminate: [],
-        buckets: this.getBucketsForType(type)
+        terminate: []
       };
 
       console.log(`Searching IntelX for ${type}: ${term}`);
@@ -114,7 +114,7 @@ export class IntelXService {
         resultsOptions.agent = proxyAgent;
       }
 
-      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=15&statistics=1&previewlines=100&offset=0`, resultsOptions);
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=8`, resultsOptions);
 
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
