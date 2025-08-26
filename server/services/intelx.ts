@@ -171,20 +171,26 @@ export class IntelXService {
   }
 
   private async formatResultsWithPreviews(records: IntelXResult[], type: string): Promise<any[]> {
+    // Process only first few records to get previews quickly
+    const recordsToProcess = records.slice(0, 3); // Only get previews for first 3 results
     const results = [];
-    for (const record of records) {
-      // Try to get actual preview content using the file/view endpoint
+    
+    console.log(`Getting previews for ${recordsToProcess.length} records`);
+    
+    for (const record of recordsToProcess) {
       let preview = this.extractPreview(record.contents || '');
       
+      // Always try to get actual content preview if no contents
       if (!record.contents || record.contents.trim().length === 0) {
         try {
+          console.log(`Fetching preview for ${record.name}`);
           const previewContent = await this.getFilePreview(record.storageid || record.systemid, record.bucket, parseInt(record.media) || 24);
           if (previewContent && previewContent.trim().length > 0) {
-            preview = previewContent.substring(0, 200).trim() + (previewContent.length > 200 ? '...' : '');
+            preview = previewContent.substring(0, 300).trim() + (previewContent.length > 300 ? '\n\n[...continúa]' : '');
+            console.log(`Got preview for ${record.name}: ${preview.substring(0, 50)}...`);
           }
         } catch (error) {
           console.log(`Could not fetch preview for ${record.systemid}:`, error);
-          // Keep default preview message
         }
       }
       
@@ -204,6 +210,26 @@ export class IntelXService {
         riskLevel: this.calculateRiskLevel(record.bucket, type),
       });
     }
+    
+    // Add remaining records without preview fetching
+    for (const record of records.slice(3)) {
+      results.push({
+        id: record.systemid,
+        storageId: record.storageid || record.systemid,
+        type,
+        term: record.name,
+        bucket: record.bucket,
+        added: record.added,
+        size: record.size,
+        media: record.media,
+        contents: record.contents,
+        preview: this.extractPreview(record.contents || ''),
+        lastSeen: this.formatDate(record.added),
+        source: this.formatSource(record.bucket),
+        riskLevel: this.calculateRiskLevel(record.bucket, type),
+      });
+    }
+    
     return results;
   }
 
