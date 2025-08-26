@@ -1,3 +1,5 @@
+import { proxyManager } from './proxyManager';
+
 interface IntelXConfig {
   apiKey: string;
   baseUrl: string;
@@ -63,18 +65,32 @@ export class IntelXService {
 
       console.log(`Searching IntelX for ${type}: ${term}`);
 
-      const searchResponse = await fetch(`${this.config.baseUrl}/intelligent/search`, {
+      const proxyAgent = proxyManager.createProxyAgent();
+      const fetchOptions: any = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'x-key': this.config.apiKey,
         },
         body: JSON.stringify(searchParams),
-      });
+      };
+
+      if (proxyAgent) {
+        fetchOptions.agent = proxyAgent;
+      }
+
+      const searchResponse = await fetch(`${this.config.baseUrl}/intelligent/search`, fetchOptions);
 
       if (!searchResponse.ok) {
         const errorText = await searchResponse.text();
         console.error('IntelX search init error:', searchResponse.status, errorText);
+        
+        // Si hay error, rotar proxy para el próximo intento
+        if (searchResponse.status === 429 || searchResponse.status === 403) {
+          console.log('Rate limited, forcing proxy rotation');
+          proxyManager.forceRotate();
+        }
+        
         throw new Error(`IntelX API error: ${searchResponse.status} - ${errorText}`);
       }
 
@@ -85,13 +101,19 @@ export class IntelXService {
         throw new Error('No search ID returned from IntelX');
       }
 
-      // Step 2: Get search results
-      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=8`, {
+      // Step 2: Get search results (usando el mismo proxy)
+      const resultsOptions: any = {
         method: 'GET',
         headers: {
           'x-key': this.config.apiKey,
         },
-      });
+      };
+
+      if (proxyAgent) {
+        resultsOptions.agent = proxyAgent;
+      }
+
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=8`, resultsOptions);
 
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
