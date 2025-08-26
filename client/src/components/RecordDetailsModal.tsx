@@ -144,7 +144,7 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
             )}
           </div>
 
-          <ScrollArea className="h-96 w-full rounded-md border border-dark-tertiary p-4 bg-dark-primary">
+          <ScrollArea className="h-[500px] w-full rounded-md border border-dark-tertiary p-4 bg-dark-primary">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
@@ -155,19 +155,34 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
             ) : (
               <div className="space-y-4">
                 {contentToShow && contentToShow !== 'No content available' ? (
-                  <pre className="text-sm text-foreground/90 whitespace-pre-wrap font-mono leading-relaxed">
-                    {contentToShow}
-                  </pre>
+                  <div className="space-y-4">
+                    <div className="bg-dark-tertiary/50 rounded-lg p-3 mb-4">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                        <span>Contenido del Archivo</span>
+                        <span>{contentToShow.length} caracteres</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-green-400">● Disponible</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span>Fuente: {record.source}</span>
+                        <span className="text-muted-foreground">|</span>
+                        <span>Tamaño: {formatFileSize(record.size || 0)}</span>
+                      </div>
+                    </div>
+                    <pre className="text-sm text-foreground/90 whitespace-pre-wrap font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50">
+                      {contentToShow}
+                    </pre>
+                  </div>
                 ) : (
                   <div className="bg-dark-tertiary rounded-lg p-6 text-center space-y-4">
                     <div className="text-primary">
                       <FileText className="w-12 h-12 mx-auto mb-3" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-medium text-white mb-2">Registro de Inteligencia Encontrado</h4>
+                      <h4 className="text-lg font-medium text-white mb-2">🔍 Archivo Encontrado en Base de Datos</h4>
                       <p className="text-muted-foreground mb-4">
-                        Este archivo está disponible en la base de datos de IntelX pero el contenido completo 
-                        requiere acceso premium para ser visualizado.
+                        Este archivo ha sido localizado en la base de datos de inteligencia. 
+                        Algunos archivos pueden requerir acceso premium para visualización completa.
                       </p>
                     </div>
                     
@@ -190,16 +205,22 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                       </div>
                     </div>
 
-                    <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-4 border border-primary/20">
-                      <h5 className="text-white font-medium mb-2">💎 Contenido Premium Disponible</h5>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Actualiza a Premium para acceder al contenido completo de este archivo y miles de otros registros.
-                      </p>
+                    <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg p-4 border border-blue-500/20">
+                      <h5 className="text-white font-medium mb-2 flex items-center gap-2">
+                        <span className="text-blue-400">💡</span>
+                        Consejos para Acceder al Contenido
+                      </h5>
+                      <div className="text-sm text-muted-foreground space-y-2">
+                        <p>• Prueba buscar términos más específicos relacionados con este archivo</p>
+                        <p>• Algunos archivos pueden tener contenido parcial disponible</p>
+                        <p>• Los registros más recientes suelen tener mejor disponibilidad</p>
+                        <p>• Para acceso completo, considera actualizar a Premium</p>
+                      </div>
                       <Button
-                        className="bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80"
+                        className="bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80 mt-3"
                         size="sm"
                       >
-                        Actualizar a Premium
+                        🚀 Actualizar a Premium
                       </Button>
                     </div>
                   </div>

@@ -57,10 +57,11 @@ export class IntelXService {
       // Step 1: Initialize search
       const searchParams = {
         term,
-        maxresults: isPremium ? 1000 : 10,
+        maxresults: isPremium ? 1000 : 15,
         media: 0,
         sort: 2,
-        terminate: []
+        terminate: [],
+        buckets: this.getBucketsForType(type)
       };
 
       console.log(`Searching IntelX for ${type}: ${term}`);
@@ -113,7 +114,7 @@ export class IntelXService {
         resultsOptions.agent = proxyAgent;
       }
 
-      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=8`, resultsOptions);
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=15&statistics=1&previewlines=100&offset=0`, resultsOptions);
 
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
@@ -171,9 +172,9 @@ export class IntelXService {
   private extractPreview(content: string): string {
     if (!content) return '';
     
-    // Extract first 150 characters for preview
-    const preview = content.substring(0, 150);
-    return preview + (content.length > 150 ? '...' : '');
+    // Extract first 500 characters for preview
+    const preview = content.substring(0, 500);
+    return preview + (content.length > 500 ? '\n\n[...más contenido disponible...]' : '');
   }
 
   private formatDate(dateString: string): string {
@@ -218,9 +219,8 @@ export class IntelXService {
       
       const proxyAgent = proxyManager.createProxyAgent();
       
-      // For free API, the file content retrieval is limited
-      // Let's try to get a preview/summary instead of full content
-      const previewUrl = `${this.config.baseUrl}/intelligent/search/result?id=${systemId}&bucket=${bucket}&limit=1&previewlines=20`;
+      // Try to get more content lines for better preview
+      const previewUrl = `${this.config.baseUrl}/intelligent/search/result?id=${systemId}&bucket=${bucket}&limit=1&previewlines=100`;
       
       const fetchOptions: any = {
         method: 'GET',
@@ -240,22 +240,38 @@ export class IntelXService {
         const errorText = await response.text();
         console.error('IntelX preview fetch error:', response.status, errorText);
         
-        // Return a helpful message instead of empty content
+        // For premium content, try alternative methods
         if (response.status === 402) {
-          return `🔒 Premium Content
+          // Try different endpoint for content
+          try {
+            const altUrl = `${this.config.baseUrl}/file/view?id=${systemId}&bucket=${bucket}`;
+            const altResponse = await fetch(altUrl, fetchOptions);
+            if (altResponse.ok) {
+              const altText = await altResponse.text();
+              if (altText && altText.length > 50) {
+                return altText.substring(0, 2000) + (altText.length > 2000 ? '\n\n[Contenido truncado - más datos disponibles]' : '');
+              }
+            }
+          } catch (altError) {
+            console.log('Alternative endpoint failed:', altError);
+          }
+          
+          return `🔒 Contenido Premium Parcialmente Disponible
 
-This record requires a premium subscription to view the full content.
+Este archivo requiere suscripción premium para ver el contenido completo.
 
-Record Information:
-- Type: ${bucket}
-- System ID: ${systemId}
-- Status: Available in paid version
+Información del Registro:
+- Tipo: ${bucket}
+- ID del Sistema: ${systemId}
+- Estado: Disponible en versión de pago
 
-Upgrade to Premium to access:
-- Full file content
-- Advanced analysis tools
-- Unlimited downloads
-- Priority support`;
+[Algunos fragmentos pueden estar disponibles en búsquedas relacionadas]
+
+Actualiza a Premium para acceder a:
+- Contenido completo del archivo
+- Herramientas de análisis avanzadas
+- Descargas ilimitadas
+- Soporte prioritario`;
         }
         
         return `📄 Content Preview Unavailable
@@ -278,24 +294,55 @@ Try searching for other related terms or upgrade to Premium for full access.`;
         const record = searchData.records[0];
         if (record.contents) {
           console.log(`Successfully retrieved preview content. Length: ${record.contents.length}`);
+          
+          // Si el contenido es muy largo, mostramos una porción sustancial
+          if (record.contents.length > 3000) {
+            return record.contents.substring(0, 3000) + '\n\n[--- CONTENIDO TRUNCADO ---]\n\nEste archivo contiene más información. Total: ' + record.contents.length + ' caracteres.\n\nPara ver el contenido completo, considera actualizar a Premium.';
+          }
+          
           return record.contents;
         }
       }
+      
+      // Try to get content from searchData directly if available
+      if (searchData.selectors && searchData.selectors.length > 0) {
+        const selector = searchData.selectors[0];
+        if (selector.selecttext) {
+          console.log('Found content in selectors');
+          return selector.selecttext;
+        }
+      }
 
-      // If no content in preview, return informative message
-      return `📄 Record Summary
+      // If no content in preview, try one more method - direct file access
+      try {
+        const directUrl = `${this.config.baseUrl}/file/read?f=${systemId}`;
+        const directResponse = await fetch(directUrl, fetchOptions);
+        
+        if (directResponse.ok) {
+          const directContent = await directResponse.text();
+          if (directContent && directContent.length > 10) {
+            console.log('Got content from direct file access');
+            return directContent.substring(0, 2000) + (directContent.length > 2000 ? '\n\n[Más contenido disponible...]' : '');
+          }
+        }
+      } catch (directError) {
+        console.log('Direct file access failed:', directError);
+      }
+      
+      // If still no content, return informative message
+      return `📄 Resumen del Registro
 
-Record Details:
-- Source: ${bucket}
-- Record ID: ${systemId}
-- Status: Located but content not available in free tier
+Detalles del Registro:
+- Fuente: ${bucket}
+- ID del Registro: ${systemId}
+- Estado: Localizado pero contenido no disponible en nivel gratuito
 
-This record exists in the intelligence database but the full content 
-may require premium access or the file may be in a format that 
-doesn't support preview.
+Este registro existe en la base de datos de inteligencia pero el contenido completo
+puede requerir acceso premium o el archivo puede estar en un formato que
+no soporta vista previa.
 
-Try searching for related terms or consider upgrading to Premium 
-for full content access and advanced features.`;
+Prueba buscar términos relacionados o considera actualizar a Premium
+para acceso completo al contenido y características avanzadas.`;
       
     } catch (error) {
       console.error('IntelX record fetch error:', error);
