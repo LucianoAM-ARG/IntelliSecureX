@@ -317,6 +317,11 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
                       <span className="text-white font-mono">{paymentData.cryptoAmount} {paymentData.cryptoSymbol}</span>
                     </div>
                     <div className="text-xs text-slate-500 mt-1">≈ ${paymentData.usdAmount} USD</div>
+                    {paymentData.confirmsNeeded && (
+                      <div className="text-xs text-slate-500 mt-1">
+                        Confirmaciones necesarias: {paymentData.confirmsNeeded}
+                      </div>
+                    )}
                   </div>
                   
                   <div>
@@ -334,6 +339,33 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
                       </Button>
                     </div>
                   </div>
+
+                  {/* QR Code section */}
+                  {paymentData.qrCodeUrl && (
+                    <div className="text-center py-3">
+                      <div className="text-sm text-slate-400 mb-2">Código QR para Pago</div>
+                      <img 
+                        src={paymentData.qrCodeUrl} 
+                        alt="QR Code para pago" 
+                        className="mx-auto border border-dark-tertiary rounded bg-white p-2"
+                        style={{ maxWidth: '150px', maxHeight: '150px' }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Status URL section */}
+                  {paymentData.statusUrl && (
+                    <div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(paymentData.statusUrl, '_blank')}
+                        className="w-full border-dark-tertiary text-slate-300 hover:bg-dark-tertiary"
+                      >
+                        Ver Estado del Pago en Tiempo Real
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -341,7 +373,10 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
             <Alert className="bg-warning/10 border-warning/20 mb-4">
               <AlertCircle className="w-4 h-4 text-warning" />
               <AlertDescription className="text-warning text-sm">
-                El pago expira en 24 horas. Envía la cantidad exacta a la dirección de arriba.
+                {paymentData.coinPaymentsTxnId ? 
+                  "Pago gestionado por CoinPayments. Verificación automática disponible." :
+                  "El pago expira en 24 horas. Envía la cantidad exacta a la dirección de arriba."
+                }
               </AlertDescription>
             </Alert>
 
@@ -361,15 +396,28 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
               <div className="w-16 h-16 bg-secondary/20 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <CheckCircle className="w-8 h-8 text-secondary" />
               </div>
-              <p className="text-slate-400">Ingresa el hash de tu transacción para verificar el pago</p>
+              <p className="text-slate-400">
+                {paymentData?.coinPaymentsTxnId ? 
+                  "Verificación automática disponible. Hash manual opcional." :
+                  "Ingresa el hash de tu transacción para verificar el pago"
+                }
+              </p>
             </div>
 
             <div className="space-y-4 mb-6">
               <div>
-                <div className="text-sm text-slate-400 mb-2">Hash de Transacción</div>
+                <div className="text-sm text-slate-400 mb-2">
+                  {paymentData?.coinPaymentsTxnId ? 
+                    "Hash de Transacción (Opcional)" :
+                    "Hash de Transacción (Requerido)"
+                  }
+                </div>
                 <Input
                   type="text"
-                  placeholder="Ingresa el hash de la transacción de tu wallet..."
+                  placeholder={paymentData?.coinPaymentsTxnId ? 
+                    "Opcional: ingresa el hash para verificación manual..." :
+                    "Ingresa el hash de la transacción de tu wallet..."
+                  }
                   value={txHash}
                   onChange={(e) => setTxHash(e.target.value)}
                   className="bg-dark-primary border-dark-tertiary text-white placeholder-slate-500"
@@ -389,7 +437,7 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
               </Button>
               <Button 
                 onClick={handleVerifyPayment}
-                disabled={verifyPaymentMutation.isPending || !txHash.trim()}
+                disabled={verifyPaymentMutation.isPending || (!paymentData?.coinPaymentsTxnId && !txHash.trim())}
                 className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80"
                 data-testid="button-verify-payment"
               >

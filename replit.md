@@ -35,9 +35,11 @@ Preferred communication style: Simple, everyday language.
 - **User Management**: Automatic user creation/updates on login with subscription tracking
 
 ## Payment Processing
-- **Cryptocurrency Payments**: Complete Bitcoin payment flow with blockchain verification
-- **Pricing Model**: Freemium with daily limits (3 searches) for free users, unlimited for premium (0.001 BTC/month)
-- **Subscription Handling**: Automatic subscription status updates and crypto payment verification
+- **Dual Crypto Payment System**: Integrated CoinPayments.net for production-ready crypto payments with fallback system
+- **CoinPayments Integration**: Real crypto payment processing with unique addresses, QR codes, and automatic blockchain verification
+- **Supported Cryptocurrencies**: Bitcoin, Ethereum, Litecoin, Bitcoin Cash, Dogecoin, Monero, and more
+- **Pricing Model**: Freemium with daily limits (3 searches) for free users, unlimited for premium ($29 USD/month)
+- **Automatic Verification**: Webhook-based payment confirmation with real-time status updates
 - **Privacy-First**: No credit card data storage, enhanced privacy through cryptocurrency transactions
 
 ## External Intelligence Service

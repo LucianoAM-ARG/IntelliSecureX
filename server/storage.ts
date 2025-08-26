@@ -29,6 +29,7 @@ export interface IStorage {
   // Crypto payment operations
   createCryptoPayment(payment: InsertCryptoPayment): Promise<CryptoPayment>;
   getCryptoPayment(id: string): Promise<CryptoPayment | undefined>;
+  getCryptoPaymentByTxnId(txnId: string): Promise<CryptoPayment | undefined>;
   updateCryptoPaymentStatus(id: string, status: string, transactionHash?: string): Promise<CryptoPayment>;
   getUserCryptoPayments(userId: string): Promise<CryptoPayment[]>;
 }
@@ -156,6 +157,11 @@ export class DatabaseStorage implements IStorage {
 
   async getCryptoPayment(id: string): Promise<CryptoPayment | undefined> {
     const [payment] = await db.select().from(cryptoPayments).where(eq(cryptoPayments.id, id));
+    return payment;
+  }
+
+  async getCryptoPaymentByTxnId(txnId: string): Promise<CryptoPayment | undefined> {
+    const [payment] = await db.select().from(cryptoPayments).where(eq(cryptoPayments.transactionHash, txnId));
     return payment;
   }
 

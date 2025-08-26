@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupTelegramAuth, requireAuth } from "./telegramAuth";
 import { intelxService } from "./services/intelx";
 import { cryptoPricingService } from "./services/cryptoPricing";
+import { coinPaymentsService } from "./services/coinPayments";
 import { insertSearchQuerySchema } from "@shared/schema";
 import { z } from "zod";
 import { initializeBot } from "./telegramBot";
@@ -303,11 +304,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get crypto prices
   app.get('/api/crypto/prices', requireAuth, async (req: any, res) => {
     try {
-      const prices = await cryptoPricingService.getCryptoPrices();
-      res.json(prices);
+      if (coinPaymentsService.isConfigured()) {
+        // Use CoinPayments for real rates
+        const rates = await coinPaymentsService.getRates();
+        const supportedCurrencies = coinPaymentsService.getSupportedCurrencies();
+        
+        const prices = Object.keys(supportedCurrencies).map(symbol => {
+          const rateKey = Object.keys(rates).find(key => key.startsWith(`USD/${symbol}`));
+          const rate = rateKey ? rates[rateKey] : null;
+          
+          return {
+            id: symbol.toLowerCase(),
+            name: supportedCurrencies[symbol],
+            symbol: symbol,
+            icon: symbol.toLowerCase(),
+            priceUsd: rate ? 1 / parseFloat(rate.rate_btc) * rates['USD/BTC']?.rate_btc || 50000 : 1000,
+            available: !!rate
+          };
+        }).filter(price => price.available);
+        
+        res.json(prices);
+      } else {
+        // Fallback to original service
+        const prices = await cryptoPricingService.getCryptoPrices();
+        res.json(prices);
+      }
     } catch (error) {
       console.error('Error fetching crypto prices:', error);
-      res.status(500).json({ message: 'Failed to fetch crypto prices' });
+      // Fallback to original service on error
+      try {
+        const prices = await cryptoPricingService.getCryptoPrices();
+        res.json(prices);
+      } catch (fallbackError) {
+        res.status(500).json({ message: 'Failed to fetch crypto prices' });
+      }
     }
   });
 
@@ -326,42 +356,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      // Get current crypto prices
-      const cryptoPrices = await cryptoPricingService.getCryptoPrices();
-      const selectedCrypto = cryptoPrices.find(crypto => crypto.id === cryptoType);
-      
-      if (!selectedCrypto) {
-        return res.status(400).json({ message: 'Invalid crypto type' });
+      const premiumPriceUsd = 29; // $29 USD
+
+      if (coinPaymentsService.isConfigured()) {
+        // Use CoinPayments for real transaction
+        const transaction = await coinPaymentsService.createTransaction(
+          premiumPriceUsd,
+          'USD',
+          cryptoType.toUpperCase(),
+          'Intelligence Security X Premium Subscription',
+          `user_${user.id}_premium_${Date.now()}`
+        );
+
+        if (!transaction) {
+          throw new Error('Failed to create transaction with CoinPayments');
+        }
+
+        // Store payment record with CoinPayments transaction ID
+        const expiresAt = new Date(Date.now() + transaction.timeout * 1000);
+        
+        const payment = await storage.createCryptoPayment({
+          userId: user.id,
+          cryptoType: cryptoType.toUpperCase(),
+          amountUsd: premiumPriceUsd * 100, // Store in cents
+          cryptoAmount: transaction.amount,
+          paymentAddress: transaction.address,
+          status: 'pending',
+          expiresAt,
+          transactionHash: transaction.txn_id, // Store CoinPayments txn_id
+        });
+
+        res.json({
+          paymentId: payment.id,
+          cryptoType: cryptoType.toUpperCase(),
+          cryptoName: coinPaymentsService.getSupportedCurrencies()[cryptoType.toUpperCase()],
+          cryptoSymbol: cryptoType.toUpperCase(),
+          cryptoAmount: transaction.amount,
+          usdAmount: premiumPriceUsd,
+          paymentAddress: transaction.address,
+          expiresAt,
+          qrCodeUrl: transaction.qrcode_url,
+          statusUrl: transaction.status_url,
+          confirmsNeeded: transaction.confirms_needed,
+          coinPaymentsTxnId: transaction.txn_id
+        });
+      } else {
+        // Fallback to original system
+        const cryptoPrices = await cryptoPricingService.getCryptoPrices();
+        const selectedCrypto = cryptoPrices.find(crypto => crypto.id === cryptoType);
+        
+        if (!selectedCrypto) {
+          return res.status(400).json({ message: 'Invalid crypto type' });
+        }
+
+        const cryptoAmount = cryptoPricingService.calculateCryptoAmount(cryptoType, selectedCrypto.priceUsd);
+        const formattedAmount = cryptoPricingService.formatCryptoAmount(cryptoAmount, selectedCrypto.symbol);
+        
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+        const paymentAddress = cryptoPricingService.generatePaymentAddress(cryptoType);
+        
+        const payment = await storage.createCryptoPayment({
+          userId: user.id,
+          cryptoType: selectedCrypto.id,
+          amountUsd: premiumPriceUsd * 100,
+          cryptoAmount: formattedAmount,
+          paymentAddress,
+          status: 'pending',
+          expiresAt,
+        });
+
+        res.json({
+          paymentId: payment.id,
+          cryptoType: selectedCrypto.id,
+          cryptoName: selectedCrypto.name,
+          cryptoSymbol: selectedCrypto.symbol,
+          cryptoAmount: formattedAmount,
+          usdAmount: premiumPriceUsd,
+          paymentAddress,
+          expiresAt,
+        });
       }
-
-      const premiumPriceUsd = cryptoPricingService.getPremiumPriceUsd();
-      const cryptoAmount = cryptoPricingService.calculateCryptoAmount(cryptoType, selectedCrypto.priceUsd);
-      const formattedAmount = cryptoPricingService.formatCryptoAmount(cryptoAmount, selectedCrypto.symbol);
-      
-      // Create payment record
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-      const paymentAddress = cryptoPricingService.generatePaymentAddress(cryptoType);
-      
-      const payment = await storage.createCryptoPayment({
-        userId: user.id,
-        cryptoType: selectedCrypto.id,
-        amountUsd: premiumPriceUsd * 100, // Store in cents
-        cryptoAmount: formattedAmount,
-        paymentAddress,
-        status: 'pending',
-        expiresAt,
-      });
-
-      res.json({
-        paymentId: payment.id,
-        cryptoType: selectedCrypto.id,
-        cryptoName: selectedCrypto.name,
-        cryptoSymbol: selectedCrypto.symbol,
-        cryptoAmount: formattedAmount,
-        usdAmount: premiumPriceUsd,
-        paymentAddress,
-        expiresAt,
-      });
     } catch (error: any) {
       console.error('Crypto payment creation error:', error);
       res.status(400).json({ error: { message: error.message } });
@@ -374,8 +448,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const telegramId = req.user.telegramId;
       const { paymentId, txHash } = req.body;
 
-      if (!paymentId || !txHash) {
-        return res.status(400).json({ message: 'Payment ID and transaction hash are required' });
+      if (!paymentId) {
+        return res.status(400).json({ message: 'Payment ID is required' });
       }
 
       const user = await storage.getUserByTelegramId(telegramId);
@@ -401,27 +475,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Payment has expired' });
       }
 
-      // En un entorno real, aquí verificarías el hash de transacción en la blockchain
-      // Por ahora, simplemente aceptamos cualquier hash válido
-      if (txHash.length < 10) {
-        return res.status(400).json({ message: 'Invalid transaction hash' });
+      if (coinPaymentsService.isConfigured() && payment.transactionHash) {
+        // Use CoinPayments to verify transaction status
+        try {
+          const txInfo = await coinPaymentsService.getTransactionInfo(payment.transactionHash);
+          
+          // CoinPayments status codes:
+          // -1 = Cancelled / Timed Out
+          // 0 = Waiting for buyer funds
+          // 1 = We have confirmed coin reception from the buyer
+          // 2 = Queued for nightly payout (if you have the 'payout_mode' for the coin set to 'nightly')
+          // 100 = Payment Complete
+          
+          if (txInfo.status >= 1) {
+            // Payment received and confirmed
+            await storage.updateCryptoPaymentStatus(paymentId, 'confirmed', payment.transactionHash);
+            
+            // Update user subscription
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+            await storage.updateSubscriptionStatus(user.id, 'active', expiresAt);
+
+            res.json({ 
+              success: true, 
+              message: 'Payment verified successfully',
+              subscriptionExpiresAt: expiresAt,
+              status: txInfo.status_text,
+              received: txInfo.receivedf
+            });
+          } else if (txInfo.status === -1) {
+            // Payment cancelled or timed out
+            await storage.updateCryptoPaymentStatus(paymentId, 'expired');
+            res.status(400).json({ message: 'Payment was cancelled or timed out' });
+          } else {
+            // Still waiting for payment
+            res.json({ 
+              success: false, 
+              message: 'Payment not yet received',
+              status: txInfo.status_text,
+              received: txInfo.receivedf,
+              required: txInfo.amountf
+            });
+          }
+        } catch (error) {
+          console.error('CoinPayments verification error:', error);
+          res.status(500).json({ message: 'Failed to verify payment with CoinPayments' });
+        }
+      } else {
+        // Fallback verification (manual transaction hash)
+        if (!txHash || txHash.length < 10) {
+          return res.status(400).json({ message: 'Transaction hash is required for manual verification' });
+        }
+
+        // Update payment status
+        await storage.updateCryptoPaymentStatus(paymentId, 'confirmed', txHash);
+        
+        // Update user subscription
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        await storage.updateSubscriptionStatus(user.id, 'active', expiresAt);
+
+        res.json({ 
+          success: true, 
+          message: 'Payment verified successfully',
+          subscriptionExpiresAt: expiresAt 
+        });
       }
-
-      // Update payment status
-      await storage.updateCryptoPaymentStatus(paymentId, 'confirmed', txHash);
-      
-      // Update user subscription
-      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
-      await storage.updateSubscriptionStatus(user.id, 'active', expiresAt);
-
-      res.json({ 
-        success: true, 
-        message: 'Payment verified successfully',
-        subscriptionExpiresAt: expiresAt 
-      });
     } catch (error: any) {
       console.error('Payment verification error:', error);
       res.status(400).json({ error: { message: error.message } });
+    }
+  });
+
+  // CoinPayments IPN (Instant Payment Notification) webhook
+  app.post('/api/crypto/coinpayments-ipn', async (req, res) => {
+    try {
+      const body = JSON.stringify(req.body);
+      const isValid = coinPaymentsService.verifyIPN(req.headers as Record<string, string>, body);
+      
+      if (!isValid) {
+        console.error('Invalid CoinPayments IPN signature');
+        return res.status(400).json({ message: 'Invalid IPN signature' });
+      }
+
+      const { txn_id, status, status_text, custom } = req.body;
+      
+      if (status >= 1) {
+        // Payment confirmed, find and update payment record
+        const payment = await storage.getCryptoPaymentByTxnId(txn_id);
+        
+        if (payment && payment.status === 'pending') {
+          await storage.updateCryptoPaymentStatus(payment.id, 'confirmed', txn_id);
+          
+          // Update user subscription
+          const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+          await storage.updateSubscriptionStatus(payment.userId, 'active', expiresAt);
+          
+          console.log(`Payment ${payment.id} confirmed via IPN: ${status_text}`);
+        }
+      }
+
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error('CoinPayments IPN error:', error);
+      res.status(500).json({ message: 'IPN processing failed' });
     }
   });
 
