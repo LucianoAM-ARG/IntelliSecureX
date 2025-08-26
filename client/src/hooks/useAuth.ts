@@ -81,7 +81,7 @@ export function useAuth() {
 
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["/api/auth/user"],
-    enabled: !!initData || !isTelegramApp, // Enable query if we have initData or not in Telegram
+    enabled: true, // Always enable for development and Telegram mode
     retry: false,
   });
 

@@ -81,6 +81,18 @@ export function setupTelegramAuth(app: Express) {
     const initData = req.headers['authorization']?.replace('twa ', '') || req.query.initData as string;
     
     if (!initData) {
+      // Development mode fallback for testing outside Telegram
+      if (process.env.NODE_ENV === 'development') {
+        req.user = {
+          telegramId: 'dev_user_123',
+          firstName: 'Dev',
+          lastName: 'User', 
+          username: 'devuser',
+          languageCode: 'en',
+          isPremium: false,
+        };
+        return next();
+      }
       return res.status(401).json({ message: 'No Telegram data provided' });
     }
 

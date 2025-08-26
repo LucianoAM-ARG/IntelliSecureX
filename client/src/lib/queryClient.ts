@@ -14,7 +14,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const headers: Record<string, string> = data ? { "Content-Type": "application/json" } : {};
   
-  // Add Telegram Web App authentication if available
+  // Add Telegram Web App authentication if available (skip in development)
   if (window.Telegram?.WebApp?.initData) {
     headers["Authorization"] = `twa ${window.Telegram.WebApp.initData}`;
   }
@@ -38,7 +38,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const headers: Record<string, string> = {};
     
-    // Add Telegram Web App authentication if available
+    // Add Telegram Web App authentication if available (skip in development)
     if (window.Telegram?.WebApp?.initData) {
       headers["Authorization"] = `twa ${window.Telegram.WebApp.initData}`;
     }
