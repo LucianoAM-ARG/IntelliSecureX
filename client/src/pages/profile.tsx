@@ -11,7 +11,7 @@ import CryptoPaymentModal from "@/components/CryptoPaymentModal";
 import { useState } from "react";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, telegramWebApp, initData, telegramUser } = useAuth();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const { data: subscriptionStatus } = useQuery({
@@ -24,8 +24,8 @@ export default function Profile() {
     retry: false,
   });
 
-  const isPremium = subscriptionStatus?.isPremium || false;
-  const remainingQueries = subscriptionStatus?.remainingQueries || 0;
+  const isPremium = (subscriptionStatus as any)?.isPremium || false;
+  const remainingQueries = (subscriptionStatus as any)?.remainingQueries || 0;
   const totalSearches = Array.isArray(searchHistory) ? searchHistory.length : 0;
   const dailyLimit = 3;
   const usedToday = dailyLimit - remainingQueries;
@@ -55,7 +55,7 @@ export default function Profile() {
                   Profile
                 </h1>
                 <p className="text-muted-foreground">
-                  {user?.email || "OSINT Analyst"}
+                  {(user as any)?.email || "OSINT Analyst"}
                 </p>
               </div>
               <div className="ml-auto">
@@ -88,13 +88,25 @@ export default function Profile() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">User ID</span>
                   <span className="text-foreground font-mono text-sm" data-testid="text-user-id">
-                    {user?.id ? `${user.id.slice(0, 8)}...` : "Loading..."}
+                    {(user as any)?.id ? `${(user as any).id.slice(0, 8)}...` : "Loading..."}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Email</span>
-                  <span className="text-foreground" data-testid="text-user-email">
-                    {user?.email || "Not available"}
+                  <span className="text-muted-foreground">Telegram ID</span>
+                  <span className="text-foreground font-mono text-sm" data-testid="text-telegram-id">
+                    {(user as any)?.telegramId || telegramUser?.id || "Not detected"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Name</span>
+                  <span className="text-foreground" data-testid="text-user-name">
+                    {(user as any)?.firstName || telegramUser?.first_name || "Not available"} {(user as any)?.lastName || telegramUser?.last_name || ""}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Username</span>
+                  <span className="text-foreground" data-testid="text-username">
+                    {(user as any)?.username || telegramUser?.username ? `@${(user as any)?.username || telegramUser?.username}` : "Not available"}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -106,11 +118,49 @@ export default function Profile() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Member Since</span>
                   <span className="text-foreground">
-                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Unknown"}
+                    {(user as any)?.createdAt ? new Date((user as any).createdAt).toLocaleDateString() : "Unknown"}
                   </span>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Debug Information (only in development) */}
+            {process.env.NODE_ENV === 'development' && (
+              <Card className="bg-dark-secondary border-dark-tertiary">
+                <CardHeader>
+                  <CardTitle className="text-foreground flex items-center">
+                    <Target className="w-5 h-5 mr-2 text-secondary" />
+                    Debug Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-sm space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Telegram Available</span>
+                      <span className={`${telegramWebApp ? 'text-green-500' : 'text-red-500'}`}>
+                        {telegramWebApp ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Init Data Length</span>
+                      <span className="text-foreground">{initData?.length || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Telegram User ID</span>
+                      <span className="text-foreground font-mono text-xs">
+                        {telegramUser?.id || 'Not available'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Database User</span>
+                      <span className={`${user ? 'text-green-500' : 'text-red-500'}`}>
+                        {user ? 'Found' : 'Not found'}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Usage Statistics */}
             <Card className="bg-dark-secondary border-dark-tertiary">

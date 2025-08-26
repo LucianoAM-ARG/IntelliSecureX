@@ -97,7 +97,13 @@ export function setupTelegramAuth(app: Express) {
 
     const initData = req.headers['authorization']?.replace('twa ', '') || req.query.initData as string;
     
+    // Debug logging
+    console.log('Auth middleware - Path:', req.path);
+    console.log('Auth middleware - Init data present:', !!initData);
+    console.log('Auth middleware - Init data length:', initData?.length || 0);
+    
     if (!initData) {
+      console.log('Auth middleware - No init data, using development fallback');
       // Development mode fallback for testing outside Telegram
       if (process.env.NODE_ENV === 'development') {
         req.user = {
@@ -120,8 +126,15 @@ export function setupTelegramAuth(app: Express) {
 
     const telegramData = validateTelegramWebAppData(initData, botToken);
     if (!telegramData) {
+      console.log('Auth middleware - Invalid Telegram data validation failed');
       return res.status(401).json({ message: 'Invalid Telegram data' });
     }
+
+    console.log('Auth middleware - Telegram data validated successfully:', {
+      userId: telegramData.user.id,
+      firstName: telegramData.user.first_name,
+      username: telegramData.user.username
+    });
 
     // Add user to request
     req.user = {
