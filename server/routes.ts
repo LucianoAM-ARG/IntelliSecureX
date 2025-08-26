@@ -239,6 +239,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Load more search results (infinite pagination)
+  app.post('/api/search/load-more', requireAuth, async (req: any, res) => {
+    try {
+      const telegramId = req.user.telegramId;
+      const { searchId, page, lastSearchTime } = req.body;
+
+      if (!searchId || page === undefined) {
+        return res.status(400).json({ message: "Search ID and page are required" });
+      }
+
+      let user = await storage.getUserByTelegramId(telegramId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if enough time has passed since last search (5 minutes for free users)
+      const now = new Date();
+      const isPremium = user.subscriptionStatus === 'active' && 
+                       (!user.subscriptionExpiresAt || user.subscriptionExpiresAt > now);
+      
+      if (!isPremium && lastSearchTime) {
+        const timeSinceSearch = now.getTime() - new Date(lastSearchTime).getTime();
+        const minWaitTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+        
+        if (timeSinceSearch < minWaitTime) {
+          const remainingTime = Math.ceil((minWaitTime - timeSinceSearch) / 1000);
+          return res.status(429).json({ 
+            message: `Debes esperar ${Math.ceil(remainingTime / 60)} minutos antes de cargar más resultados.`,
+            remainingTime 
+          });
+        }
+      }
+
+      // Continue the search
+      const searchResults = await intelxService.continueSearch(searchId, page, 10);
+
+      res.json({
+        ...searchResults,
+        isPremium,
+      });
+    } catch (error) {
+      console.error("Load more search error:", error);
+      res.status(500).json({ message: "Failed to load more results" });
+    }
+  });
+
   // Get record details
   app.get('/api/record/:recordId/:bucket', requireAuth, async (req: any, res) => {
     try {

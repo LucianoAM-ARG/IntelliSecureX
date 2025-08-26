@@ -106,8 +106,8 @@ export default function SearchInterface({ onSearchResults, isSearching, setIsSea
     }
   };
 
-  const isPremium = subscriptionStatus?.isPremium || false;
-  const remainingQueries = subscriptionStatus?.remainingQueries;
+  const isPremium = (subscriptionStatus as any)?.isPremium || false;
+  const remainingQueries = (subscriptionStatus as any)?.remainingQueries;
 
   return (
     <>

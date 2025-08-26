@@ -1,14 +1,18 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Globe, Mail, Server, Fingerprint, ExternalLink, Download, Shield, Bell, Crown, Search } from "lucide-react";
-import { useState } from "react";
+import { Globe, Mail, Server, Fingerprint, ExternalLink, Download, Shield, Bell, Crown, Search, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import CryptoPaymentModal from "./CryptoPaymentModal";
 import RecordDetailsModal from "./RecordDetailsModal";
 
 interface SearchResultsProps {
   results: any;
   isLoading: boolean;
+  lastSearchTime?: string;
 }
 
 const getTypeIcon = (type: string) => {
@@ -30,10 +34,15 @@ const getRiskColor = (risk: string) => {
   }
 };
 
-export default function SearchResults({ results, isLoading }: SearchResultsProps) {
+export default function SearchResults({ results, isLoading, lastSearchTime }: SearchResultsProps) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [allResults, setAllResults] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [canLoadMore, setCanLoadMore] = useState(false);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   if (isLoading) {
     return (
@@ -50,11 +59,58 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
     );
   }
 
+  // Load more mutation
+  const loadMoreMutation = useMutation({
+    mutationFn: async (data: { searchId: string; page: number; lastSearchTime: string }) => {
+      return await apiRequest('/api/search/load-more', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+    },
+    onSuccess: (data) => {
+      setAllResults(prev => [...prev, ...data.results]);
+      setCurrentPage(prev => prev + 1);
+      setCanLoadMore(data.hasMore);
+      toast({
+        title: "Más resultados cargados",
+        description: `Se cargaron ${data.results.length} resultados adicionales`,
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error loading more results:', error);
+      toast({
+        title: "Error",
+        description: error.message || "No se pudieron cargar más resultados",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update results when new search comes in
+  useEffect(() => {
+    if (results?.results) {
+      setAllResults(results.results);
+      setCurrentPage(0);
+      setCanLoadMore(results.hasMore);
+    }
+  }, [results]);
+
+  const handleLoadMore = () => {
+    if (!results?.searchId || !lastSearchTime) return;
+    
+    loadMoreMutation.mutate({
+      searchId: results.searchId,
+      page: currentPage + 1,
+      lastSearchTime: lastSearchTime,
+    });
+  };
+
   if (!results) {
     return null;
   }
 
-  const { results: searchResults, total, isPremium } = results;
+  const { total, isPremium } = results;
+  const searchResults = allResults;
 
   return (
     <>
@@ -217,6 +273,67 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                     </div>
                   </CardContent>
                 </Card>
+              )}
+
+              {/* Load More Button */}
+              {canLoadMore && isPremium && (
+                <div className="text-center mt-6">
+                  <Button
+                    onClick={handleLoadMore}
+                    disabled={loadMoreMutation.isPending}
+                    variant="outline"
+                    className="border-primary/30 text-primary hover:bg-primary/10"
+                    data-testid="button-load-more"
+                  >
+                    {loadMoreMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Cargando más resultados...
+                      </>
+                    ) : (
+                      'Cargar 10 resultados más'
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {/* Load More for Free Users with Time Limit */}
+              {canLoadMore && !isPremium && lastSearchTime && (
+                <div className="text-center mt-6">
+                  <Card className="bg-warning/10 border-warning/20 p-4">
+                    <p className="text-warning text-sm mb-3">
+                      Para cargar más resultados, debes esperar 5 minutos desde tu última búsqueda o mejorar a Premium para acceso inmediato.
+                    </p>
+                    <div className="flex space-x-2 justify-center">
+                      <Button
+                        onClick={handleLoadMore}
+                        disabled={loadMoreMutation.isPending}
+                        variant="outline"
+                        size="sm"
+                        className="border-warning/30 text-warning hover:bg-warning/10"
+                        data-testid="button-load-more-free"
+                      >
+                        {loadMoreMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            Intentando...
+                          </>
+                        ) : (
+                          'Intentar cargar más'
+                        )}
+                      </Button>
+                      <Button
+                        onClick={() => setShowUpgradeModal(true)}
+                        size="sm"
+                        className="bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80"
+                        data-testid="button-upgrade-for-instant"
+                      >
+                        <Crown className="w-4 h-4 mr-1" />
+                        Mejorar a Premium
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
               )}
             </div>
           )}

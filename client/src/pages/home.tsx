@@ -12,6 +12,7 @@ export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [lastSearchTime, setLastSearchTime] = useState<string | undefined>(undefined);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -46,7 +47,10 @@ export default function Home() {
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         <SearchInterface 
-          onSearchResults={setSearchResults}
+          onSearchResults={(results) => {
+            setSearchResults(results);
+            setLastSearchTime(new Date().toISOString());
+          }}
           isSearching={isSearching}
           setIsSearching={setIsSearching}
         />
@@ -55,6 +59,7 @@ export default function Home() {
           <SearchResults 
             results={searchResults}
             isLoading={isSearching}
+            lastSearchTime={lastSearchTime}
           />
         )}
         

@@ -53,7 +53,7 @@ export class IntelXService {
     };
   }
 
-  async search(term: string, type: 'domain' | 'ip' | 'email' | 'hash', isPremium: boolean = false): Promise<any> {
+  async search(term: string, type: 'domain' | 'ip' | 'email' | 'hash', isPremium: boolean = false, page: number = 0, limit: number = 10): Promise<any> {
     try {
       // Step 1: Initialize search (simplified for free API)
       const searchParams = {
@@ -133,7 +133,8 @@ export class IntelXService {
         resultsOptions.agent = proxyAgent;
       }
 
-      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=20`, resultsOptions);
+      const offset = page * limit;
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=${limit}&offset=${offset}&statistics=1&previewlines=20`, resultsOptions);
 
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
@@ -147,7 +148,7 @@ export class IntelXService {
       
       console.log('About to call formatResultsWithPreviews...');
       try {
-        const formattedResults = await this.formatResultsWithPreviews(searchData.records || [], type);
+        const formattedResults = await this.formatResultsWithPreviews(searchData.records || [], type, isPremium);
         console.log('formatResultsWithPreviews completed successfully');
         console.log('Formatted results:', JSON.stringify(formattedResults.slice(0, 2), null, 2));
         
@@ -155,6 +156,9 @@ export class IntelXService {
           results: formattedResults,
           total: searchData.statistics?.total || searchData.records?.length || 0,
           buckets: searchData.statistics?.buckets || {},
+          page,
+          hasMore: searchData.records && searchData.records.length === limit,
+          searchId: searchInit.id,
         };
       } catch (previewError) {
         console.error('Error in formatResultsWithPreviews, falling back to basic format:', previewError);
@@ -165,6 +169,9 @@ export class IntelXService {
           results: formattedResults,
           total: searchData.statistics?.total || searchData.records?.length || 0,
           buckets: searchData.statistics?.buckets || {},
+          page,
+          hasMore: searchData.records && searchData.records.length === limit,
+          searchId: searchInit.id,
         };
       }
     } catch (error) {
@@ -184,17 +191,21 @@ export class IntelXService {
     return bucketMap[type] || ['pastes', 'leaks', 'public'];
   }
 
-  private async formatResultsWithPreviews(records: IntelXResult[], type: string): Promise<any[]> {
-    // Process only first few records to get previews quickly
-    const recordsToProcess = records.slice(0, 3); // Only get previews for first 3 results
+  private async formatResultsWithPreviews(records: IntelXResult[], type: string, isPremium: boolean = false): Promise<any[]> {
     const results = [];
     
-    console.log(`Getting previews for ${recordsToProcess.length} records`);
+    // Para usuarios premium, obtener previsualizaciones de todos los registros
+    // Para usuarios gratuitos, obtener previsualizaciones de los primeros 5
+    const previewLimit = isPremium ? records.length : Math.min(5, records.length);
     
-    for (const record of recordsToProcess) {
+    console.log(`Getting previews for ${previewLimit} out of ${records.length} records (isPremium: ${isPremium})`);
+    
+    // Procesar registros con previsualizaciones
+    for (let i = 0; i < previewLimit; i++) {
+      const record = records[i];
       let preview = this.extractPreview(record.contents || '');
       
-      // Always try to get actual content preview if no contents
+      // Intentar obtener vista previa real si no hay contenido
       if (!record.contents || record.contents.trim().length === 0) {
         try {
           console.log(`Fetching preview for ${record.name}`);
@@ -225,8 +236,9 @@ export class IntelXService {
       });
     }
     
-    // Add remaining records without preview fetching
-    for (const record of records.slice(3)) {
+    // Agregar registros restantes sin buscar previsualizaciones
+    for (let i = previewLimit; i < records.length; i++) {
+      const record = records[i];
       results.push({
         id: record.systemid,
         storageId: record.storageid || record.systemid,
@@ -459,6 +471,60 @@ Storage ID: ${storageId}`;
       console.log(`>>> getFilePreview error: ${error}`);
       // Return empty string so the default preview message is used
       return '';
+    }
+  }
+
+  // Método para continuar una búsqueda existente (paginación)
+  async continueSearch(searchId: string, page: number = 1, limit: number = 10): Promise<any> {
+    try {
+      console.log(`Continuing search ${searchId}, page ${page}`);
+      
+      const proxyAgent = proxyManager.createProxyAgent();
+      const offset = page * limit;
+      
+      const resultsOptions: any = {
+        method: 'GET',
+        headers: {
+          'accept': '*/*',
+          'origin': 'https://intelx.io',
+          'referer': 'https://intelx.io/',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+          'x-key': this.config.apiKey,
+        },
+      };
+
+      if (proxyAgent) {
+        resultsOptions.agent = proxyAgent;
+      }
+
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchId}&limit=${limit}&offset=${offset}&statistics=1&previewlines=20`, resultsOptions);
+
+      if (!resultsResponse.ok) {
+        const errorText = await resultsResponse.text();
+        console.error('IntelX continue search error:', resultsResponse.status, errorText);
+        throw new Error(`IntelX API error: ${resultsResponse.status} - ${errorText}`);
+      }
+
+      const searchData = await resultsResponse.json();
+      console.log(`Found ${searchData.records?.length || 0} more records on page ${page}`);
+      
+      // Para paginación, no importa el tipo, usar formatResults básico para ser más rápido
+      const formattedResults = this.formatResults(searchData.records || [], 'unknown');
+      
+      return {
+        results: formattedResults,
+        total: searchData.statistics?.total || searchData.records?.length || 0,
+        buckets: searchData.statistics?.buckets || {},
+        page,
+        hasMore: searchData.records && searchData.records.length === limit,
+        searchId,
+      };
+    } catch (error) {
+      console.error('IntelX continue search error:', error);
+      throw error;
     }
   }
 }
