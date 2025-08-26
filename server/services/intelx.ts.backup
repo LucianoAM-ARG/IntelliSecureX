@@ -233,29 +233,194 @@ export class IntelXService {
     return 'Low';
   }
 
+
   async getRecord(systemId: string, bucket: string): Promise<string> {
     try {
       console.log(`Getting record: systemId=${systemId}, bucket=${bucket}`);
       
-      // The search results already give us the storageId in the systemId field
-      // Try direct file access using the provided systemId as the storageId
+      const proxyAgent = proxyManager.createProxyAgent();
+      
+      // Try to use the systemId directly as storageId since we already have it from search results
       console.log(`Attempting direct file access using systemId as storageId`);
-      return await this.getFileContentDirectly(systemId, bucket, 24);
+      return await this.getFileContentDirectly(systemId, bucket, 24); // Default media type
+
+      // Old approach below - keeping as fallback but not used
+      /*
+      const recordUrl = `${this.config.baseUrl}/intelligent/search/result?id=${systemId}&bucket=${bucket}&limit=1`;
+      
+      const fetchOptions: any = {
+        method: 'GET',
+        headers: {
+          'x-key': this.config.apiKey,
+        },
+      };
+
+      if (proxyAgent) {
+        fetchOptions.agent = proxyAgent;
+      }
+
+      console.log(`Getting record details: ${recordUrl}`);
+      const response = await fetch(recordUrl, fetchOptions);
+
+      if (!response.ok) {
+        console.error('Failed to get record details:', response.status);
+        return `📄 No se pudo obtener el registro
+        
+Error: ${response.status}
+Record ID: ${systemId}
+Bucket: ${bucket}`;
+      }
+
+      const recordData = await response.json();
+      
+      // If the API call fails, try using the systemId directly as storageId
+      // since we already have the storageId from the search results
+      if (!recordData.records || recordData.records.length === 0) {
+        console.log(`No records found, trying direct access with systemId as storageId`);
+        return await this.getFileContentDirectly(systemId, bucket, 24); // Default media type
+      }
+      
+      const record = recordData.records[0];
+      const storageId = record.storageid;
+      const recordType = record.type || 1;
+      const media = record.media || 24;
+      
+      console.log(`Using file/preview with storageId: ${storageId}, type: ${recordType}, media: ${media}`);
+      console.log(`Full record data:`, JSON.stringify(record, null, 2));
+      
+      // Try the exact format from the curl example you provided
+      const filePreviewUrl = `${this.config.baseUrl}/file/preview?` +
+        `sid=${storageId}&` +
+        `f=0&` +  // Start from beginning
+        `l=8&` + // Get 8 lines like in your example
+        `c=1&` +  // Include content
+        `m=${media}&` +  // Use actual media type
+        `b=${bucket}&` +
+        `k=${this.config.apiKey}`;
+      
+      console.log(`Fetching file preview: ${filePreviewUrl}`);
+      
+      const previewResponse = await fetch(filePreviewUrl, {
+        ...fetchOptions,
+        headers: {
+          ...fetchOptions.headers,
+          'accept': '*/*',
+          'origin': 'https://intelx.io',
+          'referer': 'https://intelx.io/',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+        }
+      });
+      
+      if (!previewResponse.ok) {
+        console.error('File preview error:', previewResponse.status);
+        
+        // Try alternative with different parameters
+        const altPreviewUrl = `${this.config.baseUrl}/file/preview?` +
+          `sid=${storageId}&` +
+          `f=0&` +
+          `l=50&` +
+          `c=1&` +
+          `m=0&` +
+          `b=${bucket}&` +
+          `k=${this.config.apiKey}`;
+        
+        console.log(`Trying alternative preview: ${altPreviewUrl}`);
+        
+        const altResponse = await fetch(altPreviewUrl, fetchOptions);
+        
+        if (altResponse.ok) {
+          const altContent = await altResponse.text();
+          if (altContent && altContent.trim().length > 0) {
+            console.log(`Got alternative content, length: ${altContent.length}`);
+            return altContent + (altContent.length > 1000 ? '\n\n[...más contenido disponible]' : '');
+          }
+        }
+        
+        // If both methods fail, return informative message
+        if (previewResponse.status === 402) {
+          return `🔒 Contenido Premium
+
+Este archivo requiere suscripción premium para ver el contenido completo.
+
+Detalles del Archivo:
+- Fuente: ${bucket}
+- Storage ID: ${storageId}
+- Tipo: ${recordType}
+- Estado: Disponible en versión de pago
+
+Actualiza a Premium para:
+- Ver contenido completo
+- Descargar archivos
+- Acceso ilimitado
+- Análisis avanzado`;
+        }
+        
+        return `📄 Vista Previa No Disponible
+
+No se pudo obtener el contenido del archivo:
+- Error: ${previewResponse.status}
+- Storage ID: ${storageId}
+- Bucket: ${bucket}
+
+Posibles causas:
+- Archivo demasiado grande
+- Contenido requiere acceso premium
+- Limitaciones temporales del servidor`;
+      }
+      
+      const previewContent = await previewResponse.text();
+      console.log(`Raw preview response:`, previewContent);
+      console.log(`Preview response length:`, previewContent.length);
+      
+      if (previewContent && previewContent.trim().length > 0) {
+        console.log(`Successfully retrieved file content. Length: ${previewContent.length}`);
+        
+        // Clean up the content and format it nicely
+        let cleanContent = previewContent.trim();
+        
+        // If content is very long, show substantial portion
+        if (cleanContent.length > 3000) {
+          cleanContent = cleanContent.substring(0, 3000) + 
+            '\n\n[--- CONTENIDO TRUNCADO ---]\n' +
+            `Archivo completo: ${cleanContent.length} caracteres\n` +
+            'Para ver el contenido completo, considera actualizar a Premium.';
+        }
+        
+        return cleanContent;
+      }
+      
+      return `📋 Archivo Localizado
+
+Se encontró el archivo pero no hay contenido de vista previa disponible.
+
+Detalles:
+- Storage ID: ${storageId}
+- Fuente: ${bucket}
+- Tipo: ${recordType}
+
+Este archivo puede:
+- Requerir acceso premium para visualización
+- Estar en un formato que no soporta vista previa
+- Contener datos binarios no mostrables`;
       
     } catch (error) {
       console.error('IntelX record fetch error:', error);
-      return `❌ Error al obtener contenido del archivo
+      return `❌ Content Retrieval Error
 
-Error: ${error instanceof Error ? error.message : 'Unknown error'}
-Record ID: ${systemId}
-Bucket: ${bucket}
+Failed to retrieve record content:
+- Error: ${error instanceof Error ? error.message : 'Unknown error'}
+- Record ID: ${systemId}
+- Bucket: ${bucket}
 
-Esto puede deberse a:
-- Problemas de conectividad de red
-- Limitaciones de la API
-- Servidor temporalmente no disponible
+This could be due to:
+- Network connectivity issues
+- API rate limiting
+- Server temporarily unavailable
 
-Intenta nuevamente en unos momentos.`;
+Please try again in a few moments or contact support if the issue persists.`;
     }
   }
 
@@ -265,11 +430,11 @@ Intenta nuevamente en unos momentos.`;
       
       const proxyAgent = proxyManager.createProxyAgent();
       
-      // Use the exact format from the curl example you provided
+      // Try the exact format from the curl example
       const filePreviewUrl = `${this.config.baseUrl}/file/preview?` +
         `sid=${storageId}&` +
         `f=0&` +
-        `l=50&` + 
+        `l=50&` + // Get more lines
         `c=1&` +
         `m=${media}&` +
         `b=${bucket}&` +
@@ -299,16 +464,7 @@ Intenta nuevamente en unos momentos.`;
       
       if (!previewResponse.ok) {
         console.error('Direct file preview error:', previewResponse.status);
-        return `📄 No se pudo obtener el contenido del archivo
-
-Error: ${previewResponse.status}
-Storage ID: ${storageId}
-Bucket: ${bucket}
-
-Posibles causas:
-- Archivo requiere acceso premium
-- Contenido no disponible temporalmente
-- Limitaciones del servidor`;
+        return `📄 No se pudo obtener el contenido del archivo\n\nError: ${previewResponse.status}\nStorage ID: ${storageId}\nBucket: ${bucket}`;
       }
       
       const previewContent = await previewResponse.text();
@@ -320,18 +476,11 @@ Posibles causas:
         return previewContent.trim();
       }
       
-      return `📋 Archivo localizado pero sin contenido de vista previa
-
-Storage ID: ${storageId}
-Bucket: ${bucket}
-Estado: Archivo encontrado pero contenido no disponible`;
+      return `📋 Archivo localizado pero sin contenido de vista previa\n\nStorage ID: ${storageId}\nBucket: ${bucket}`;
       
     } catch (error) {
       console.error('Direct file access error:', error);
-      return `❌ Error al acceder al archivo directamente
-
-Error: ${error instanceof Error ? error.message : 'Unknown error'}
-Storage ID: ${storageId}`;
+      return `❌ Error al acceder al archivo directamente\n\nError: ${error instanceof Error ? error.message : 'Unknown error'}\nStorage ID: ${storageId}`;
     }
   }
 }
