@@ -414,6 +414,7 @@ Storage ID: ${storageId}`;
 
   private async getFilePreview(storageId: string, bucket: string, media?: number): Promise<string> {
     try {
+      console.log(`>>> getFilePreview called with storageId: ${storageId.substring(0, 20)}...`);
       const proxyAgent = proxyManager.createProxyAgent();
       
       // Use the file/view endpoint as shown in the curl example
@@ -423,6 +424,8 @@ Storage ID: ${storageId}`;
         `bucket=${bucket}&` +
         `k=${this.config.apiKey}&` +
         `license=academia`;
+      
+      console.log(`>>> File view URL: ${fileViewUrl}`);
       
       const fetchOptions: any = {
         method: 'GET',
@@ -444,15 +447,18 @@ Storage ID: ${storageId}`;
       }
 
       const response = await fetch(fileViewUrl, fetchOptions);
+      console.log(`>>> File view response status: ${response.status}`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
       
       const content = await response.text();
+      console.log(`>>> File view content length: ${content.length}, first 50 chars: ${content.substring(0, 50)}`);
       return content;
       
     } catch (error) {
+      console.log(`>>> getFilePreview error: ${error}`);
       // Return empty string so the default preview message is used
       return '';
     }
