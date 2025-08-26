@@ -1,6 +1,23 @@
 import { createHash, createHmac } from 'crypto';
 import type { Express, RequestHandler } from "express";
 
+// Extend Express Request interface for TypeScript
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        telegramId: string;
+        firstName: string;
+        lastName?: string;
+        username?: string;
+        languageCode?: string;
+        isPremium?: boolean;
+        photoUrl?: string;
+      };
+    }
+  }
+}
+
 export interface TelegramUser {
   id: number;
   first_name: string;
@@ -128,17 +145,3 @@ export const requireAuth: RequestHandler = (req, res, next) => {
   next();
 };
 
-// Extend Express User interface for TypeScript
-declare global {
-  namespace Express {
-    interface User {
-      telegramId: string;
-      firstName: string;
-      lastName?: string;
-      username?: string;
-      languageCode?: string;
-      isPremium?: boolean;
-      photoUrl?: string;
-    }
-  }
-}
