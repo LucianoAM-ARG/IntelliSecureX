@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, User, Crown, LogOut } from "lucide-react";
+import { Shield, User, Crown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -90,15 +90,6 @@ export default function Header() {
                       Upgrade to Premium
                     </DropdownMenuItem>
                   )}
-                  
-                  <DropdownMenuItem 
-                    onClick={() => window.location.href = "/api/logout"}
-                    className="text-foreground focus:bg-dark-tertiary"
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Sign Out
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
