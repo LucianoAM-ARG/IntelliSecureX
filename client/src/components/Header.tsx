@@ -21,7 +21,7 @@ export default function Header() {
     retry: false,
   });
 
-  const isPremium = subscriptionStatus?.isPremium || false;
+  const isPremium = (subscriptionStatus as any)?.isPremium || false;
   const userPlan = isPremium ? "PREMIUM" : "FREE";
 
   return (
@@ -69,11 +69,11 @@ export default function Header() {
                   <DropdownMenuItem className="text-foreground focus:bg-dark-tertiary">
                     <div className="flex flex-col">
                       <span className="font-medium" data-testid="text-user-email">
-                        {user?.email || "User"}
+                        {(user as any)?.email || "User"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {subscriptionStatus?.remainingQueries !== null 
-                          ? `${subscriptionStatus?.remainingQueries || 0} searches left today`
+                        {(subscriptionStatus as any)?.remainingQueries !== null 
+                          ? `${(subscriptionStatus as any)?.remainingQueries || 0} searches left today`
                           : "Unlimited searches"
                         }
                       </span>

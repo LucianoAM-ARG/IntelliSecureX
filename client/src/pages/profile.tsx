@@ -5,14 +5,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Shield, Crown, Search, Calendar, Activity, Target } from "lucide-react";
+import { Shield, Crown, Search, Calendar, Activity, Target, ArrowLeft } from "lucide-react";
 import Header from "@/components/Header";
 import CryptoPaymentModal from "@/components/CryptoPaymentModal";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 export default function Profile() {
   const { user, telegramWebApp, initData, telegramUser } = useAuth();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [, navigate] = useLocation();
 
   const { data: subscriptionStatus } = useQuery({
     queryKey: ["/api/subscription/status"],
@@ -44,6 +46,19 @@ export default function Profile() {
         <Header />
         
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {/* Back Button */}
+          <div className="mb-4">
+            <Button
+              variant="ghost"
+              onClick={() => navigate("/")}
+              className="text-muted-foreground hover:text-foreground"
+              data-testid="button-back-home"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Volver al inicio
+            </Button>
+          </div>
+
           {/* Profile Header */}
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
