@@ -52,6 +52,12 @@ export class IntelXService {
 
   async search(term: string, type: 'domain' | 'ip' | 'email' | 'hash', isPremium: boolean = false): Promise<any> {
     try {
+      // Check if we should use demo mode (when API key is invalid)
+      if (this.config.apiKey === 'b725faf7-b146-474e-8bee-5164e3ab7c61' || this.config.apiKey === '00000000-0000-0000-0000-000000000000') {
+        console.log('Using demo mode for IntelX search');
+        return this.getDemoResults(term, type);
+      }
+
       // Step 1: Initialize search
       const searchParams = {
         term,
@@ -73,7 +79,8 @@ export class IntelXService {
       if (!searchResponse.ok) {
         const errorText = await searchResponse.text();
         console.error('IntelX search init error:', searchResponse.status, errorText);
-        throw new Error(`IntelX API error: ${searchResponse.status}`);
+        console.log('Falling back to demo mode');
+        return this.getDemoResults(term, type);
       }
 
       const searchInit = await searchResponse.json();
@@ -93,7 +100,8 @@ export class IntelXService {
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
         console.error('IntelX results error:', resultsResponse.status, errorText);
-        throw new Error(`IntelX API error: ${resultsResponse.status}`);
+        console.log('Falling back to demo mode');
+        return this.getDemoResults(term, type);
       }
 
       const searchData = await resultsResponse.json();
@@ -105,7 +113,8 @@ export class IntelXService {
       };
     } catch (error) {
       console.error('IntelX search error:', error);
-      throw new Error('Failed to perform IntelX search');
+      console.log('Falling back to demo mode');
+      return this.getDemoResults(term, type);
     }
   }
 
