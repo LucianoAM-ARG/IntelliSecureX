@@ -46,7 +46,7 @@ export class IntelXService {
 
     this.config = {
       apiKey,
-      baseUrl: 'https://2.intelx.io',
+      baseUrl: 'https://free.intelx.io',
     };
   }
 
