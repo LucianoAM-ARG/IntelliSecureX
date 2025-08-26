@@ -123,10 +123,14 @@ export class IntelXService {
 
       const searchData = await resultsResponse.json();
       console.log(`Found ${searchData.records?.length || 0} records`);
+      console.log('Search response data:', JSON.stringify(searchData, null, 2));
+      
+      const formattedResults = this.formatResults(searchData.records || [], type);
+      console.log('Formatted results:', JSON.stringify(formattedResults.slice(0, 2), null, 2));
       
       return {
-        results: this.formatResults(searchData.records || [], type),
-        total: searchData.statistics?.total || 0,
+        results: formattedResults,
+        total: searchData.statistics?.total || searchData.records?.length || 0,
         buckets: searchData.statistics?.buckets || {},
       };
     } catch (error) {
