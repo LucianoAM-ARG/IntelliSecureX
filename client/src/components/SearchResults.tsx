@@ -128,12 +128,16 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                             <span data-testid={`text-result-size-${index}`}>{result.size} bytes</span>
                           </p>
                         )}
-                        {result.preview && (
-                          <div className="mt-2 p-2 bg-dark-tertiary rounded text-xs text-foreground/70 font-mono">
-                            <span className="text-muted-foreground">Preview:</span>
-                            <div className="mt-1 whitespace-pre-wrap">{result.preview}</div>
-                          </div>
-                        )}
+                        <div className="mt-2 p-2 bg-dark-tertiary rounded text-xs text-foreground/70">
+                          <span className="text-muted-foreground">ID del Registro:</span>
+                          <div className="mt-1 font-mono text-primary">{result.id}</div>
+                          {result.preview && (
+                            <>
+                              <span className="text-muted-foreground mt-2 block">Vista Previa:</span>
+                              <div className="mt-1 whitespace-pre-wrap font-mono">{result.preview}</div>
+                            </>
+                          )}
+                        </div>
                       </div>
                       
                       <div className="flex items-center space-x-3">

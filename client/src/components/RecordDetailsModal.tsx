@@ -153,9 +153,58 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                 </div>
               </div>
             ) : (
-              <pre className="text-sm text-foreground/90 whitespace-pre-wrap font-mono leading-relaxed">
-                {contentToShow || 'No content available'}
-              </pre>
+              <div className="space-y-4">
+                {contentToShow && contentToShow !== 'No content available' ? (
+                  <pre className="text-sm text-foreground/90 whitespace-pre-wrap font-mono leading-relaxed">
+                    {contentToShow}
+                  </pre>
+                ) : (
+                  <div className="bg-dark-tertiary rounded-lg p-6 text-center space-y-4">
+                    <div className="text-primary">
+                      <FileText className="w-12 h-12 mx-auto mb-3" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-medium text-white mb-2">Registro de Inteligencia Encontrado</h4>
+                      <p className="text-muted-foreground mb-4">
+                        Este archivo está disponible en la base de datos de IntelX pero el contenido completo 
+                        requiere acceso premium para ser visualizado.
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left bg-dark-primary rounded p-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Fuente</p>
+                        <p className="text-white font-medium">{record.source}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Tamaño</p>
+                        <p className="text-white font-medium">{formatFileSize(record.size || 0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Tipo</p>
+                        <p className="text-white font-medium">{record.bucket}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Último Visto</p>
+                        <p className="text-white font-medium">{record.lastSeen}</p>
+                      </div>
+                    </div>
+
+                    <div className="bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg p-4 border border-primary/20">
+                      <h5 className="text-white font-medium mb-2">💎 Contenido Premium Disponible</h5>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Actualiza a Premium para acceder al contenido completo de este archivo y miles de otros registros.
+                      </p>
+                      <Button
+                        className="bg-gradient-to-r from-primary to-secondary hover:from-primary/80 hover:to-secondary/80"
+                        size="sm"
+                      >
+                        Actualizar a Premium
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </ScrollArea>
 
