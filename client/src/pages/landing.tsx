@@ -4,7 +4,7 @@ import { Shield, Search, Zap, Crown, CheckCircle } from "lucide-react";
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-dark-primary text-slate-100">
+    <div className="min-h-screen bg-dark-primary text-foreground">
       {/* Header */}
       <div className="bg-dark-secondary border-b border-dark-tertiary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -15,7 +15,7 @@ export default function Landing() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-white">Intelligence Security X</h1>
-                <p className="text-xs text-slate-400">Professional OSINT Platform</p>
+                <p className="text-xs text-muted-foreground">Professional OSINT Platform</p>
               </div>
             </div>
             <Button 
@@ -36,7 +36,7 @@ export default function Landing() {
             Advanced OSINT
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"> Intelligence</span>
           </h1>
-          <p className="text-xl text-slate-400 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto">
             Uncover hidden intelligence with our professional-grade OSINT platform. 
             Search domains, IPs, emails, and more with advanced threat intelligence capabilities.
           </p>
@@ -55,7 +55,7 @@ export default function Landing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">Powerful Intelligence Features</h2>
-          <p className="text-slate-400 text-lg">Everything you need for comprehensive OSINT investigations</p>
+          <p className="text-muted-foreground text-lg">Everything you need for comprehensive OSINT investigations</p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -65,7 +65,7 @@ export default function Landing() {
                 <Search className="w-6 h-6 text-primary" />
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">Multi-Source Search</h3>
-              <p className="text-slate-400">
+              <p className="text-muted-foreground">
                 Search across domains, IPs, emails, and hashes with advanced filtering and real-time results.
               </p>
             </CardContent>
@@ -77,7 +77,7 @@ export default function Landing() {
                 <Shield className="w-6 h-6 text-secondary" />
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">Threat Intelligence</h3>
-              <p className="text-slate-400">
+              <p className="text-muted-foreground">
                 Access comprehensive threat data including breaches, malware, and dark web intelligence.
               </p>
             </CardContent>
@@ -89,7 +89,7 @@ export default function Landing() {
                 <Zap className="w-6 h-6 text-accent" />
               </div>
               <h3 className="text-white font-semibold text-lg mb-2">Real-time Results</h3>
-              <p className="text-slate-400">
+              <p className="text-muted-foreground">
                 Get instant access to intelligence data with our high-performance search infrastructure.
               </p>
             </CardContent>
@@ -101,7 +101,7 @@ export default function Landing() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
           <h2 className="text-3xl font-bold text-white mb-4">Choose Your Plan</h2>
-          <p className="text-slate-400 text-lg">Start free, upgrade when you need more power</p>
+          <p className="text-muted-foreground text-lg">Start free, upgrade when you need more power</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -111,7 +111,7 @@ export default function Landing() {
               <div className="text-center mb-6">
                 <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
                 <div className="text-4xl font-bold text-white mb-4">$0</div>
-                <p className="text-slate-400">Perfect for getting started</p>
+                <p className="text-muted-foreground">Perfect for getting started</p>
               </div>
               
               <div className="space-y-3 mb-8">
