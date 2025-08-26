@@ -133,7 +133,7 @@ export class IntelXService {
         resultsOptions.agent = proxyAgent;
       }
 
-      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=8`, resultsOptions);
+      const resultsResponse = await fetch(`${this.config.baseUrl}/intelligent/search/result?id=${searchInit.id}&limit=10&statistics=1&previewlines=20`, resultsOptions);
 
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
@@ -145,7 +145,7 @@ export class IntelXService {
       console.log(`Found ${searchData.records?.length || 0} records`);
       console.log('Search response data:', JSON.stringify(searchData, null, 2));
       
-      const formattedResults = this.formatResults(searchData.records || [], type);
+      const formattedResults = await this.formatResultsWithPreviews(searchData.records || [], type);
       console.log('Formatted results:', JSON.stringify(formattedResults.slice(0, 2), null, 2));
       
       return {
@@ -168,6 +168,43 @@ export class IntelXService {
     };
 
     return bucketMap[type] || ['pastes', 'leaks', 'public'];
+  }
+
+  private async formatResultsWithPreviews(records: IntelXResult[], type: string): Promise<any[]> {
+    const results = [];
+    for (const record of records) {
+      // Try to get actual preview content using the file/view endpoint
+      let preview = this.extractPreview(record.contents || '');
+      
+      if (!record.contents || record.contents.trim().length === 0) {
+        try {
+          const previewContent = await this.getFilePreview(record.storageid || record.systemid, record.bucket, parseInt(record.media) || 24);
+          if (previewContent && previewContent.trim().length > 0) {
+            preview = previewContent.substring(0, 200).trim() + (previewContent.length > 200 ? '...' : '');
+          }
+        } catch (error) {
+          console.log(`Could not fetch preview for ${record.systemid}:`, error);
+          // Keep default preview message
+        }
+      }
+      
+      results.push({
+        id: record.systemid,
+        storageId: record.storageid || record.systemid,
+        type,
+        term: record.name,
+        bucket: record.bucket,
+        added: record.added,
+        size: record.size,
+        media: record.media,
+        contents: record.contents,
+        preview,
+        lastSeen: this.formatDate(record.added),
+        source: this.formatSource(record.bucket),
+        riskLevel: this.calculateRiskLevel(record.bucket, type),
+      });
+    }
+    return results;
   }
 
   private formatResults(records: IntelXResult[], type: string): any[] {
@@ -332,6 +369,52 @@ Estado: Archivo encontrado pero contenido no disponible`;
 
 Error: ${error instanceof Error ? error.message : 'Unknown error'}
 Storage ID: ${storageId}`;
+    }
+  }
+
+  private async getFilePreview(storageId: string, bucket: string, media?: number): Promise<string> {
+    try {
+      const proxyAgent = proxyManager.createProxyAgent();
+      
+      // Use the file/view endpoint as shown in the curl example
+      const fileViewUrl = `${this.config.baseUrl}/file/view?` +
+        `f=0&` +
+        `storageid=${storageId}&` +
+        `bucket=${bucket}&` +
+        `k=${this.config.apiKey}&` +
+        `license=academia`;
+      
+      const fetchOptions: any = {
+        method: 'GET',
+        headers: {
+          'accept': '*/*',
+          'accept-language': 'es-419,es;q=0.9,es-ES;q=0.8,en;q=0.7',
+          'origin': 'https://intelx.io',
+          'referer': 'https://intelx.io/',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
+          'x-key': this.config.apiKey,
+        },
+      };
+
+      if (proxyAgent) {
+        fetchOptions.agent = proxyAgent;
+      }
+
+      const response = await fetch(fileViewUrl, fetchOptions);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const content = await response.text();
+      return content;
+      
+    } catch (error) {
+      // Return empty string so the default preview message is used
+      return '';
     }
   }
 }
