@@ -23,14 +23,16 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User storage table.
+// User storage table for Telegram users.
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`), // Keep UUID format
+  telegramId: varchar("telegram_id").unique(), // telegram user ID
+  username: varchar("username"), // telegram username (@username)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  cryptoWalletAddress: varchar("crypto_wallet_address"),
+  languageCode: varchar("language_code").default("en"),
+  isPremium: boolean("is_premium").default(false), // telegram premium status
+  photoUrl: varchar("photo_url"),
   subscriptionStatus: varchar("subscription_status").default("free"),
   subscriptionExpiresAt: timestamp("subscription_expires_at"),
   dailyQueryCount: integer("daily_query_count").default(0).notNull(),

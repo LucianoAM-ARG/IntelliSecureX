@@ -1,26 +1,39 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupTelegramAuth, requireAuth } from "./telegramAuth";
 import { intelxService } from "./services/intelx";
 import { insertSearchQuerySchema } from "@shared/schema";
 import { z } from "zod";
+import { initializeBot } from "./telegramBot";
 
 const FREE_DAILY_LIMIT = 3;
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
-  await setupAuth(app);
+  setupTelegramAuth(app);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      let user = await storage.getUser(userId);
+      const telegramId = req.user.telegramId;
+      let user = await storage.getUserByTelegramId(telegramId);
+      
+      if (!user) {
+        // Create user if doesn't exist
+        user = await storage.upsertUserByTelegramId(telegramId, {
+          firstName: req.user.firstName,
+          lastName: req.user.lastName,
+          username: req.user.username,
+          languageCode: req.user.languageCode,
+          isPremium: req.user.isPremium,
+          photoUrl: req.user.photoUrl,
+        });
+      }
       
       if (user) {
         // Reset daily query count if needed
-        user = await storage.resetDailyQueryCountIfNeeded(userId);
+        user = await storage.resetDailyQueryCountIfNeeded(user.id);
       }
       
       res.json(user);
@@ -31,9 +44,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Search endpoint
-  app.post('/api/search', isAuthenticated, async (req: any, res) => {
+  app.post('/api/search', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const telegramId = req.user.telegramId;
       const { queryType, queryTerm } = req.body;
 
       // Validate input
@@ -45,13 +58,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid query type" });
       }
 
-      let user = await storage.getUser(userId);
+      let user = await storage.getUserByTelegramId(telegramId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
       // Reset daily count if needed
-      user = await storage.resetDailyQueryCountIfNeeded(userId);
+      user = await storage.resetDailyQueryCountIfNeeded(user.id);
 
       // Check daily limits for free users and subscription expiry
       const now = new Date();
@@ -70,11 +83,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Increment query count for non-premium users
       if (!isPremium) {
-        user = await storage.incrementDailyQueryCount(userId);
+        user = await storage.incrementDailyQueryCount(user.id);
       }
 
       // Save search query
-      await storage.createSearchQuery(userId, {
+      await storage.createSearchQuery(user.id, {
         queryType,
         queryTerm,
         results: searchResults.results,
@@ -93,12 +106,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get search history
-  app.get('/api/search/history', isAuthenticated, async (req: any, res) => {
+  app.get('/api/search/history', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const telegramId = req.user.telegramId;
       const limit = parseInt(req.query.limit as string) || 10;
       
-      const history = await storage.getUserSearchHistory(userId, limit);
+      const user = await storage.getUserByTelegramId(telegramId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const history = await storage.getUserSearchHistory(user.id, limit);
       res.json(history);
     } catch (error) {
       console.error("Error fetching search history:", error);
@@ -107,18 +125,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Repeat search from history
-  app.post('/api/search/repeat/:queryId', isAuthenticated, async (req: any, res) => {
+  app.post('/api/search/repeat/:queryId', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const telegramId = req.user.telegramId;
       const { queryId } = req.params;
       
+      const user = await storage.getUserByTelegramId(telegramId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
       const originalQuery = await storage.getSearchQuery(queryId);
-      if (!originalQuery || originalQuery.userId !== userId) {
+      if (!originalQuery || originalQuery.userId !== user.id) {
         return res.status(404).json({ message: "Query not found" });
       }
 
-      // Perform new search with same parameters
-      const user = await storage.getUser(userId);
+      // User already obtained above
       const now = new Date();
       const isPremium = user?.subscriptionStatus === 'active' && 
                        (!user.subscriptionExpiresAt || user.subscriptionExpiresAt > now);
@@ -138,10 +160,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Increment query count and save new search
       if (!isPremium && user) {
-        await storage.incrementDailyQueryCount(userId);
+        await storage.incrementDailyQueryCount(user.id);
       }
 
-      await storage.createSearchQuery(userId, {
+      await storage.createSearchQuery(user.id, {
         queryType: originalQuery.queryType,
         queryTerm: originalQuery.queryTerm,
         results: searchResults.results,
@@ -156,10 +178,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get subscription status
-  app.get('/api/subscription/status', isAuthenticated, async (req: any, res) => {
+  app.get('/api/subscription/status', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const telegramId = req.user.telegramId;
+      const user = await storage.getUserByTelegramId(telegramId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
@@ -183,70 +205,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate crypto payment address
-  app.post('/api/crypto/create-payment', isAuthenticated, async (req: any, res) => {
+  // Create Telegram payment invoice
+  app.post('/api/telegram/create-invoice', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const telegramId = req.user.telegramId;
+      const user = await storage.getUserByTelegramId(telegramId);
 
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Generate a unique payment address (in a real implementation, this would be generated by a crypto payment processor)
-      const paymentAddress = `bc1q${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-      const amount = 0.001; // Amount in BTC for monthly subscription
-      const paymentId = `payment_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+      // Generate unique invoice payload
+      const invoicePayload = `premium_${user.id}_${Date.now()}`;
+      
+      // Telegram payment parameters
+      const invoiceData = {
+        title: "Intelligence Security X Premium",
+        description: "Unlock unlimited OSINT searches with advanced threat intelligence capabilities",
+        payload: invoicePayload,
+        currency: "USD",
+        prices: [{ label: "Premium Monthly", amount: 999 }], // $9.99 in cents
+      };
 
       res.json({
-        paymentId,
-        paymentAddress,
-        amount,
-        currency: 'BTC',
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-        qrCode: `bitcoin:${paymentAddress}?amount=${amount}`,
+        invoice: invoiceData,
+        paymentPayload: invoicePayload,
       });
     } catch (error: any) {
-      console.error("Crypto payment creation error:", error);
+      console.error("Telegram invoice creation error:", error);
       res.status(400).json({ error: { message: error.message } });
     }
   });
 
-  // Verify crypto payment (mock implementation)
-  app.post('/api/crypto/verify-payment', isAuthenticated, async (req: any, res) => {
+  // Verify Telegram payment
+  app.post('/api/telegram/verify-payment', requireAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const { paymentId, txHash } = req.body;
+      const telegramId = req.user.telegramId;
+      const { paymentPayload, totalAmount, currency } = req.body;
 
-      if (!paymentId || !txHash) {
-        return res.status(400).json({ message: "Payment ID and transaction hash are required" });
+      if (!paymentPayload) {
+        return res.status(400).json({ message: "Payment payload is required" });
       }
 
-      // In a real implementation, this would verify the transaction on the blockchain
-      // For demo purposes, we'll accept any transaction hash that looks valid
-      if (txHash.length >= 32) {
-        const expiresAt = new Date();
-        expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month subscription
-
-        await storage.updateSubscriptionStatus(userId, 'active', expiresAt);
-        await storage.updateUserCryptoInfo(userId, txHash);
-
-        res.json({
-          success: true,
-          message: "Payment verified successfully",
-          subscription: {
-            status: 'active',
-            expiresAt
-          }
-        });
-      } else {
-        res.status(400).json({ message: "Invalid transaction hash" });
+      // Verify the payment payload belongs to this user
+      if (!paymentPayload.includes(`premium_`) || !paymentPayload.includes(telegramId)) {
+        return res.status(400).json({ message: "Invalid payment payload" });
       }
+
+      // In a real implementation, you would verify the payment with Telegram's servers
+      // For now, we'll trust the payment if it contains the right payload
+      const expiresAt = new Date();
+      expiresAt.setMonth(expiresAt.getMonth() + 1); // 1 month subscription
+
+      const user = await storage.getUserByTelegramId(telegramId);
+      if (user) {
+        await storage.updateSubscriptionStatus(user.id, 'active', expiresAt);
+      }
+
+      res.json({
+        success: true,
+        message: "Payment verified successfully",
+        subscription: {
+          status: 'active',
+          expiresAt
+        }
+      });
     } catch (error: any) {
-      console.error("Payment verification error:", error);
+      console.error("Telegram payment verification error:", error);
       res.status(400).json({ error: { message: error.message } });
     }
   });
+
+  // Initialize Telegram bot
+  const bot = initializeBot();
+  if (bot) {
+    console.log('✅ Telegram bot initialized successfully');
+    
+    // Webhook endpoint for Telegram bot updates
+    app.post('/api/telegram/webhook', async (req, res) => {
+      try {
+        await bot.handleUpdate(req.body);
+        res.status(200).send('OK');
+      } catch (error) {
+        console.error('Webhook error:', error);
+        res.status(500).send('Error processing update');
+      }
+    });
+  } else {
+    console.warn('⚠️ Telegram bot not initialized - token missing');
+  }
 
   const httpServer = createServer(app);
   return httpServer;

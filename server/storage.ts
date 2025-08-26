@@ -12,8 +12,8 @@ import { eq, desc, and, gte, sql } from "drizzle-orm";
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
-  updateUserCryptoInfo(userId: string, walletAddress: string): Promise<User>;
+  getUserByTelegramId(telegramId: string): Promise<User | undefined>;
+  upsertUserByTelegramId(telegramId: string, userData: Partial<UpsertUser>): Promise<User>;
   updateSubscriptionStatus(userId: string, status: string, expiresAt?: Date): Promise<User>;
   incrementDailyQueryCount(userId: string): Promise<User>;
   resetDailyQueryCountIfNeeded(userId: string): Promise<User>;
@@ -30,31 +30,37 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+  async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId));
     return user;
   }
 
-  async updateUserCryptoInfo(userId: string, walletAddress: string): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set({
-        cryptoWalletAddress: walletAddress,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return user;
+  async upsertUserByTelegramId(telegramId: string, userData: Partial<UpsertUser>): Promise<User> {
+    // First try to find existing user by telegram ID
+    const existingUser = await this.getUserByTelegramId(telegramId);
+    
+    if (existingUser) {
+      // Update existing user
+      const [user] = await db
+        .update(users)
+        .set({
+          ...userData,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.telegramId, telegramId))
+        .returning();
+      return user;
+    } else {
+      // Create new user
+      const [user] = await db
+        .insert(users)
+        .values({
+          telegramId,
+          ...userData,
+        })
+        .returning();
+      return user;
+    }
   }
 
   async updateSubscriptionStatus(userId: string, status: string, expiresAt?: Date): Promise<User> {

@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Crown, CheckCircle, X, Bitcoin } from "lucide-react";
+import { Crown, CheckCircle, X, CreditCard } from "lucide-react";
 import { useLocation } from "wouter";
 
 interface UpgradeModalProps {
@@ -64,8 +64,8 @@ export default function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) 
               <div className="flex items-center justify-between mb-2">
                 <span className="text-white font-medium">Monthly Plan</span>
                 <div className="flex items-center space-x-1">
-                  <Bitcoin className="w-4 h-4 text-warning" />
-                  <span className="text-primary font-bold text-xl">0.001 BTC</span>
+                  <CreditCard className="w-4 h-4 text-primary" />
+                  <span className="text-primary font-bold text-xl">$9.99</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
