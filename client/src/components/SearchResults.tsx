@@ -39,7 +39,7 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
           <div className="flex items-center justify-center py-12">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-slate-400">Searching intelligence databases...</p>
+              <p className="text-muted-foreground">Searching intelligence databases...</p>
             </div>
           </div>
         </CardContent>
@@ -61,14 +61,14 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
             <h3 className="text-lg font-semibold text-white" data-testid="text-results-title">
               Search Results
             </h3>
-            <span className="text-sm text-slate-400" data-testid="text-results-count">
+            <span className="text-sm text-muted-foreground" data-testid="text-results-count">
               Found {total} results
             </span>
           </div>
 
           {searchResults?.length === 0 ? (
             <div className="text-center py-12">
-              <div className="text-slate-400 mb-4">
+              <div className="text-muted-foreground mb-4">
                 <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No results found for your search query.</p>
                 <p className="text-sm mt-2">Try different search terms or check for typos.</p>
@@ -101,27 +101,27 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                             </Badge>
                           )}
                         </div>
-                        <span className="text-xs text-slate-400" data-testid={`text-result-date-${index}`}>
+                        <span className="text-xs text-muted-foreground" data-testid={`text-result-date-${index}`}>
                           {result.lastSeen}
                         </span>
                       </div>
                       
-                      <div className="text-sm text-slate-300 space-y-1 mb-3">
+                      <div className="text-sm text-foreground/80 space-y-1 mb-3">
                         {result.source && (
                           <p>
-                            <span className="text-slate-400">Source:</span>{' '}
+                            <span className="text-muted-foreground">Source:</span>{' '}
                             <span data-testid={`text-result-source-${index}`}>{result.source}</span>
                           </p>
                         )}
                         {result.bucket && (
                           <p>
-                            <span className="text-slate-400">Bucket:</span>{' '}
+                            <span className="text-muted-foreground">Bucket:</span>{' '}
                             <span data-testid={`text-result-bucket-${index}`}>{result.bucket}</span>
                           </p>
                         )}
                         {result.size && (
                           <p>
-                            <span className="text-slate-400">Size:</span>{' '}
+                            <span className="text-muted-foreground">Size:</span>{' '}
                             <span data-testid={`text-result-size-${index}`}>{result.size} bytes</span>
                           </p>
                         )}
@@ -142,7 +142,7 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="text-slate-400 hover:text-slate-200 p-0"
+                              className="text-muted-foreground hover:text-foreground p-0"
                               data-testid={`button-export-${index}`}
                             >
                               <Download className="w-4 h-4 mr-1" />
@@ -151,7 +151,7 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                             <Button 
                               variant="ghost" 
                               size="sm"
-                              className="text-slate-400 hover:text-slate-200 p-0"
+                              className="text-muted-foreground hover:text-foreground p-0"
                               data-testid={`button-monitor-${index}`}
                             >
                               <Bell className="w-4 h-4 mr-1" />
@@ -172,7 +172,7 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                     <div className="text-center">
                       <Crown className="w-8 h-8 text-warning mx-auto mb-2" />
                       <p className="text-white font-medium mb-2">Premium Results Available</p>
-                      <p className="text-slate-300 text-sm mb-3">
+                      <p className="text-foreground/80 text-sm mb-3">
                         Unlock {total - searchResults?.length} additional results with deep analysis
                       </p>
                       <Button

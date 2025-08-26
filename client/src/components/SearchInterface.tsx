@@ -117,7 +117,7 @@ export default function SearchInterface({ onSearchResults, isSearching, setIsSea
             <h2 className="text-2xl font-bold text-white mb-2" data-testid="text-search-title">
               Intelligence Search
             </h2>
-            <p className="text-slate-400">
+            <p className="text-muted-foreground">
               Search domains, IPs, emails, and more using advanced OSINT techniques
             </p>
           </div>
@@ -138,7 +138,7 @@ export default function SearchInterface({ onSearchResults, isSearching, setIsSea
                     className={`${
                       isSelected
                         ? "bg-primary text-white hover:bg-primary/80"
-                        : "bg-dark-tertiary text-slate-300 hover:bg-dark-tertiary/80"
+                        : "bg-dark-tertiary text-foreground hover:bg-dark-tertiary/80"
                     }`}
                     data-testid={`button-search-type-${type.id}`}
                   >
@@ -183,7 +183,7 @@ export default function SearchInterface({ onSearchResults, isSearching, setIsSea
               <AlertDescription className="text-warning">
                 <span className="font-medium">Free Account Limitations</span>
                 <br />
-                <span className="text-slate-300 text-sm">
+                <span className="text-foreground/80 text-sm">
                   You have <span className="font-bold text-warning" data-testid="text-remaining-queries">
                     {remainingQueries || 0}
                   </span> searches remaining today.{' '}
