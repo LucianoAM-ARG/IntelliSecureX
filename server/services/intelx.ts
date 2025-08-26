@@ -282,20 +282,33 @@ El archivo solicitado no se pudo localizar:
       const media = record.media || 24;
       
       console.log(`Using file/preview with storageId: ${storageId}, type: ${recordType}, media: ${media}`);
+      console.log(`Full record data:`, JSON.stringify(record, null, 2));
       
-      // Now use the correct file/preview endpoint as per Intel X documentation
+      // Try the exact format from the curl example you provided
       const filePreviewUrl = `${this.config.baseUrl}/file/preview?` +
         `sid=${storageId}&` +
         `f=0&` +  // Start from beginning
-        `l=100&` + // Get 100 lines
+        `l=8&` + // Get 8 lines like in your example
         `c=1&` +  // Include content
-        `m=1&` +  // Include metadata
+        `m=${media}&` +  // Use actual media type
         `b=${bucket}&` +
         `k=${this.config.apiKey}`;
       
       console.log(`Fetching file preview: ${filePreviewUrl}`);
       
-      const previewResponse = await fetch(filePreviewUrl, fetchOptions);
+      const previewResponse = await fetch(filePreviewUrl, {
+        ...fetchOptions,
+        headers: {
+          ...fetchOptions.headers,
+          'accept': '*/*',
+          'origin': 'https://intelx.io',
+          'referer': 'https://intelx.io/',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'
+        }
+      });
       
       if (!previewResponse.ok) {
         console.error('File preview error:', previewResponse.status);
@@ -355,6 +368,8 @@ Posibles causas:
       }
       
       const previewContent = await previewResponse.text();
+      console.log(`Raw preview response:`, previewContent);
+      console.log(`Preview response length:`, previewContent.length);
       
       if (previewContent && previewContent.trim().length > 0) {
         console.log(`Successfully retrieved file content. Length: ${previewContent.length}`);
