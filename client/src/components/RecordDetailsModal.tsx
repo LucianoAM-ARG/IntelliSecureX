@@ -146,7 +146,8 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
 
           <div className="h-[400px] w-full rounded-md border border-dark-tertiary bg-dark-primary overflow-hidden">
             <ScrollArea className="h-full w-full p-4">
-              {isLoading ? (
+              <div className="overflow-auto max-w-full">
+                {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
@@ -170,7 +171,7 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                           <span>Tamaño: {formatFileSize(record.size || 0)}</span>
                         </div>
                       </div>
-                      <pre className="text-sm text-foreground/90 whitespace-pre font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50 overflow-auto">
+                      <pre className="text-sm text-foreground/90 whitespace-pre font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50 overflow-auto max-w-full w-full break-words">
                         {contentToShow}
                       </pre>
                     </div>
@@ -226,8 +227,9 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                     </div>
                   </div>
                   )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </ScrollArea>
           </div>
 
