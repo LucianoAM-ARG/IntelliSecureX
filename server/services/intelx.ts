@@ -342,17 +342,15 @@ Intenta nuevamente en unos momentos.`;
       
       const proxyAgent = proxyManager.createProxyAgent();
       
-      // Use the exact format from the curl example you provided
-      const filePreviewUrl = `${this.config.baseUrl}/file/preview?` +
-        `sid=${storageId}&` +
+      // Use the file/view endpoint for FULL content (not just preview)
+      const fileViewUrl = `${this.config.baseUrl}/file/view?` +
         `f=0&` +
-        `l=50&` + 
-        `c=1&` +
-        `m=${media}&` +
-        `b=${bucket}&` +
-        `k=${this.config.apiKey}`;
+        `storageid=${storageId}&` +
+        `bucket=${bucket}&` +
+        `k=${this.config.apiKey}&` +
+        `license=academia`;
       
-      console.log(`Direct file preview URL: ${filePreviewUrl}`);
+      console.log(`Full file view URL: ${fileViewUrl}`);
       
       const fetchOptions: any = {
         method: 'GET',
@@ -372,7 +370,7 @@ Intenta nuevamente en unos momentos.`;
         fetchOptions.agent = proxyAgent;
       }
 
-      const previewResponse = await fetch(filePreviewUrl, fetchOptions);
+      const previewResponse = await fetch(fileViewUrl, fetchOptions);
       
       if (!previewResponse.ok) {
         console.error('Direct file preview error:', previewResponse.status);
