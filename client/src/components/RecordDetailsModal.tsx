@@ -169,9 +169,11 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                         <span>Tamaño: {formatFileSize(record.size || 0)}</span>
                       </div>
                     </div>
-                    <pre className="text-sm text-foreground/90 whitespace-pre-wrap font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50">
-                      {contentToShow}
-                    </pre>
+                    <div className="overflow-auto max-h-96 bg-slate-950/50 rounded border border-dark-tertiary/50">
+                      <pre className="text-sm text-foreground/90 whitespace-pre font-mono leading-relaxed p-4 min-w-0">
+                        {contentToShow}
+                      </pre>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-dark-tertiary rounded-lg p-6 text-center space-y-4">
