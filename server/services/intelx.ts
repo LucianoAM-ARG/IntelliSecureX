@@ -52,12 +52,6 @@ export class IntelXService {
 
   async search(term: string, type: 'domain' | 'ip' | 'email' | 'hash', isPremium: boolean = false): Promise<any> {
     try {
-      // Check if we should use demo mode (when API key is invalid)
-      if (this.config.apiKey === 'b725faf7-b146-474e-8bee-5164e3ab7c61' || this.config.apiKey === '00000000-0000-0000-0000-000000000000') {
-        console.log('Using demo mode for IntelX search');
-        return this.getDemoResults(term, type);
-      }
-
       // Step 1: Initialize search
       const searchParams = {
         term,
@@ -66,6 +60,8 @@ export class IntelXService {
         sort: 2,
         terminate: []
       };
+
+      console.log(`Searching IntelX for ${type}: ${term}`);
 
       const searchResponse = await fetch(`${this.config.baseUrl}/intelligent/search`, {
         method: 'POST',
@@ -79,11 +75,11 @@ export class IntelXService {
       if (!searchResponse.ok) {
         const errorText = await searchResponse.text();
         console.error('IntelX search init error:', searchResponse.status, errorText);
-        console.log('Falling back to demo mode');
-        return this.getDemoResults(term, type);
+        throw new Error(`IntelX API error: ${searchResponse.status} - ${errorText}`);
       }
 
       const searchInit = await searchResponse.json();
+      console.log('Search initialized with ID:', searchInit.id);
       
       if (!searchInit.id) {
         throw new Error('No search ID returned from IntelX');
@@ -100,11 +96,11 @@ export class IntelXService {
       if (!resultsResponse.ok) {
         const errorText = await resultsResponse.text();
         console.error('IntelX results error:', resultsResponse.status, errorText);
-        console.log('Falling back to demo mode');
-        return this.getDemoResults(term, type);
+        throw new Error(`IntelX API error: ${resultsResponse.status} - ${errorText}`);
       }
 
       const searchData = await resultsResponse.json();
+      console.log(`Found ${searchData.records?.length || 0} records`);
       
       return {
         results: this.formatResults(searchData.records || [], type),
@@ -113,8 +109,7 @@ export class IntelXService {
       };
     } catch (error) {
       console.error('IntelX search error:', error);
-      console.log('Falling back to demo mode');
-      return this.getDemoResults(term, type);
+      throw error;
     }
   }
 
@@ -180,59 +175,6 @@ export class IntelXService {
     return 'Low';
   }
 
-  private getDemoResults(term: string, type: string): any {
-    const demoData = [
-      {
-        id: 'demo-001',
-        type,
-        term,
-        bucket: 'pastes',
-        added: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
-        size: 1024,
-        media: 'text',
-        contents: `Demo result for ${term}. This is sample data showing how intelligence search results would appear.`,
-        lastSeen: '1 week ago',
-        source: 'Paste Sites',
-        riskLevel: 'Medium',
-      },
-      {
-        id: 'demo-002',
-        type,
-        term,
-        bucket: 'leaks',
-        added: new Date(Date.now() - 86400000 * 30).toISOString(), // 30 days ago
-        size: 2048,
-        media: 'text',
-        contents: `Critical intelligence data found for ${term}. High-risk exposure detected in data breach.`,
-        lastSeen: '1 month ago',
-        source: 'Data Breaches',
-        riskLevel: 'High',
-      },
-      {
-        id: 'demo-003',
-        type,
-        term,
-        bucket: 'public',
-        added: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
-        size: 512,
-        media: 'text',
-        contents: `Public record mentioning ${term}. Low-risk public information available.`,
-        lastSeen: '3 days ago',
-        source: 'Public Records',
-        riskLevel: 'Low',
-      }
-    ];
-
-    return {
-      results: demoData,
-      total: 3,
-      buckets: {
-        pastes: 1,
-        leaks: 1,
-        public: 1
-      }
-    };
-  }
 
   async getRecord(systemId: string, bucket: string): Promise<any> {
     try {
