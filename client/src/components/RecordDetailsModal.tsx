@@ -54,7 +54,7 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] bg-dark-secondary border-dark-tertiary">
+      <DialogContent className="max-w-4xl max-h-[90vh] bg-dark-secondary border-dark-tertiary overflow-hidden">
         <DialogHeader className="space-y-3">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-semibold text-white flex items-center gap-2">
@@ -146,7 +146,7 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
 
           <div className="h-[400px] w-full rounded-md border border-dark-tertiary bg-dark-primary overflow-hidden">
             <ScrollArea className="h-full w-full p-4">
-              <div className="overflow-auto max-w-full">
+              <div className="overflow-x-auto overflow-y-auto max-w-full w-full">
                 {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="text-center">
@@ -171,9 +171,11 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                           <span>Tamaño: {formatFileSize(record.size || 0)}</span>
                         </div>
                       </div>
-                      <pre className="text-sm text-foreground/90 whitespace-pre font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50 overflow-auto max-w-full w-full break-words">
-                        {contentToShow}
-                      </pre>
+                      <div className="text-sm text-foreground/90 font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50 overflow-auto max-w-full w-full">
+                        <pre className="whitespace-pre-wrap break-words max-w-full overflow-hidden">
+                          {contentToShow}
+                        </pre>
+                      </div>
                     </div>
                 ) : (
                   <div className="bg-dark-tertiary rounded-lg p-6 text-center space-y-4">
