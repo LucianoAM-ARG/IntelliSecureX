@@ -114,7 +114,7 @@ export default function SearchInterface({ onSearchResults, isSearching, setIsSea
       <Card className="bg-dark-secondary border-dark-tertiary shadow-lg">
         <CardContent className="p-6">
           <div className="mb-6">
-            <h2 className="text-2xl font-bold text-white mb-2" data-testid="text-search-title">
+            <h2 className="text-2xl font-bold text-foreground mb-2" data-testid="text-search-title">
               Intelligence Search
             </h2>
             <p className="text-muted-foreground">

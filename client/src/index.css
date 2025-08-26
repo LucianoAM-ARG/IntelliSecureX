@@ -45,7 +45,7 @@
 .dark {
   /* Telegram dark theme */
   --background: hsl(240 10% 8%);
-  --foreground: hsl(0 0% 98%);
+  --foreground: hsl(0 0% 85%);
   --card: hsl(240 10% 10%);
   --card-foreground: hsl(0 0% 98%);
   --popover: hsl(240 10% 10%);
@@ -55,7 +55,7 @@
   --secondary: hsl(240 4% 16%);
   --secondary-foreground: hsl(0 0% 98%);
   --muted: hsl(240 4% 16%);
-  --muted-foreground: hsl(215 20.2% 75%);
+  --muted-foreground: hsl(215 20.2% 65%);
   --accent: hsl(217.2 32.6% 17.5%);
   --accent-foreground: hsl(210 40% 98%);
   --destructive: hsl(0 84.2% 60.2%);
@@ -84,19 +84,19 @@
 /* Custom utility classes for dark theme colors */
 @layer utilities {
   .bg-dark-primary {
-    background-color: var(--dark-primary);
+    background-color: hsl(240 10% 8%);
   }
   
   .bg-dark-secondary {
-    background-color: var(--dark-secondary);
+    background-color: hsl(240 10% 10%);
   }
   
   .bg-dark-tertiary {
-    background-color: var(--dark-tertiary);
+    background-color: hsl(240 4% 16%);
   }
   
   .border-dark-tertiary {
-    border-color: var(--dark-tertiary);
+    border-color: hsl(217.2 32.6% 17.5%);
   }
   
   .text-primary {
