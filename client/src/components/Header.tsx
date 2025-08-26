@@ -37,7 +37,7 @@ export default function Header() {
                 <h1 className="text-xl font-bold text-white" data-testid="text-app-title">
                   Intelligence Security X
                 </h1>
-                <p className="text-xs text-slate-400">Professional OSINT Platform</p>
+                <p className="text-xs text-muted-foreground">Professional OSINT Platform</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -62,16 +62,16 @@ export default function Header() {
                     className="w-8 h-8 bg-dark-tertiary rounded-full flex items-center justify-center p-0"
                     data-testid="button-user-menu"
                   >
-                    <User className="w-4 h-4 text-slate-300" />
+                    <User className="w-4 h-4 text-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-dark-secondary border-dark-tertiary">
-                  <DropdownMenuItem className="text-slate-300 focus:bg-dark-tertiary">
+                  <DropdownMenuItem className="text-foreground focus:bg-dark-tertiary">
                     <div className="flex flex-col">
                       <span className="font-medium" data-testid="text-user-email">
                         {user?.email || "User"}
                       </span>
-                      <span className="text-xs text-slate-400">
+                      <span className="text-xs text-muted-foreground">
                         {subscriptionStatus?.remainingQueries !== null 
                           ? `${subscriptionStatus?.remainingQueries || 0} searches left today`
                           : "Unlimited searches"
@@ -93,7 +93,7 @@ export default function Header() {
                   
                   <DropdownMenuItem 
                     onClick={() => window.location.href = "/api/logout"}
-                    className="text-slate-300 focus:bg-dark-tertiary"
+                    className="text-foreground focus:bg-dark-tertiary"
                     data-testid="button-logout"
                   >
                     <LogOut className="w-4 h-4 mr-2" />

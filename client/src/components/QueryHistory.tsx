@@ -116,7 +116,7 @@ export default function QueryHistory() {
           <Button 
             variant="ghost" 
             size="sm"
-            className="text-slate-400 hover:text-slate-200"
+            className="text-muted-foreground hover:text-foreground"
             data-testid="button-clear-history"
           >
             <Trash2 className="w-4 h-4 mr-1" />
@@ -126,7 +126,7 @@ export default function QueryHistory() {
         
         {!searchHistory || !Array.isArray(searchHistory) || searchHistory.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-slate-400">
+            <div className="text-muted-foreground">
               <RotateCcw className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>No search history yet.</p>
               <p className="text-sm mt-1">Your searches will appear here.</p>
@@ -149,17 +149,17 @@ export default function QueryHistory() {
                     <span className="text-white text-sm" data-testid={`text-history-term-${index}`}>
                       {query.queryTerm}
                     </span>
-                    <span className="text-xs text-slate-400 capitalize" data-testid={`text-history-type-${index}`}>
+                    <span className="text-xs text-muted-foreground capitalize" data-testid={`text-history-type-${index}`}>
                       {query.queryType}
                     </span>
                     {query.resultCount > 0 && (
-                      <span className="text-xs text-slate-500" data-testid={`text-history-results-${index}`}>
+                      <span className="text-xs text-muted-foreground" data-testid={`text-history-results-${index}`}>
                         {query.resultCount} results
                       </span>
                     )}
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs text-slate-400" data-testid={`text-history-time-${index}`}>
+                    <span className="text-xs text-muted-foreground" data-testid={`text-history-time-${index}`}>
                       {formatTimeAgo(query.createdAt)}
                     </span>
                     <Button

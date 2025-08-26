@@ -158,7 +158,7 @@ export default function SearchInterface({ onSearchResults, isSearching, setIsSea
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="pr-16 bg-dark-primary border-dark-tertiary text-white placeholder-slate-500 focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="pr-16 bg-dark-primary border-dark-tertiary text-white placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={isSearching}
               data-testid="input-search-query"
             />
