@@ -144,37 +144,36 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
             )}
           </div>
 
-          <ScrollArea className="h-[500px] w-full rounded-md border border-dark-tertiary p-4 bg-dark-primary">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-muted-foreground">Loading content...</p>
+          <div className="h-[400px] w-full rounded-md border border-dark-tertiary bg-dark-primary overflow-hidden">
+            <ScrollArea className="h-full w-full p-4">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                    <p className="text-muted-foreground">Loading content...</p>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {contentToShow && contentToShow !== 'No content available' ? (
-                  <div className="space-y-4">
-                    <div className="bg-dark-tertiary/50 rounded-lg p-3 mb-4">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-                        <span>Contenido del Archivo</span>
-                        <span>{contentToShow.length} caracteres</span>
+              ) : (
+                <div className="space-y-4">
+                  {contentToShow && contentToShow !== 'No content available' ? (
+                    <div className="space-y-4">
+                      <div className="bg-dark-tertiary/50 rounded-lg p-3 mb-4">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                          <span>Contenido del Archivo</span>
+                          <span>{contentToShow.length} caracteres</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs">
+                          <span className="text-green-400">● Disponible</span>
+                          <span className="text-muted-foreground">|</span>
+                          <span>Fuente: {record.source}</span>
+                          <span className="text-muted-foreground">|</span>
+                          <span>Tamaño: {formatFileSize(record.size || 0)}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="text-green-400">● Disponible</span>
-                        <span className="text-muted-foreground">|</span>
-                        <span>Fuente: {record.source}</span>
-                        <span className="text-muted-foreground">|</span>
-                        <span>Tamaño: {formatFileSize(record.size || 0)}</span>
-                      </div>
-                    </div>
-                    <div className="overflow-auto max-h-96 bg-slate-950/50 rounded border border-dark-tertiary/50">
-                      <pre className="text-sm text-foreground/90 whitespace-pre font-mono leading-relaxed p-4 min-w-0">
+                      <pre className="text-sm text-foreground/90 whitespace-pre font-mono leading-relaxed bg-slate-950/50 rounded p-4 border border-dark-tertiary/50 overflow-auto">
                         {contentToShow}
                       </pre>
                     </div>
-                  </div>
                 ) : (
                   <div className="bg-dark-tertiary rounded-lg p-6 text-center space-y-4">
                     <div className="text-primary">
@@ -226,10 +225,11 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
                       </Button>
                     </div>
                   </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+          </div>
 
           {contentToShow && contentToShow.length > 500 && (
             <div className="text-xs text-muted-foreground text-center">
