@@ -58,9 +58,13 @@ export class IntelXService {
       // Step 1: Initialize search (simplified for free API)
       const searchParams = {
         term,
-        maxresults: 10,
-        media: 0,
+        lookuplevel: 0,
+        maxresults: 1000,
+        timeout: null,
+        datefrom: "",
+        dateto: "",
         sort: 2,
+        media: 0,
         terminate: []
       };
 
@@ -70,7 +74,15 @@ export class IntelXService {
       const fetchOptions: any = {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'accept': '*/*',
+          'accept-language': 'es-419,es;q=0.9,es-ES;q=0.8,en;q=0.7',
+          'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'origin': 'https://intelx.io',
+          'referer': 'https://intelx.io/',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
           'x-key': this.config.apiKey,
         },
         body: JSON.stringify(searchParams),
@@ -106,6 +118,13 @@ export class IntelXService {
       const resultsOptions: any = {
         method: 'GET',
         headers: {
+          'accept': '*/*',
+          'origin': 'https://intelx.io',
+          'referer': 'https://intelx.io/',
+          'sec-fetch-dest': 'empty',
+          'sec-fetch-mode': 'cors',
+          'sec-fetch-site': 'same-site',
+          'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
           'x-key': this.config.apiKey,
         },
       };
