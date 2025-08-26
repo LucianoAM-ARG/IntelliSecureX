@@ -180,6 +180,60 @@ export class IntelXService {
     return 'Low';
   }
 
+  private getDemoResults(term: string, type: string): any {
+    const demoData = [
+      {
+        id: 'demo-001',
+        type,
+        term,
+        bucket: 'pastes',
+        added: new Date(Date.now() - 86400000 * 7).toISOString(), // 7 days ago
+        size: 1024,
+        media: 'text',
+        contents: `Demo result for ${term}. This is sample data showing how intelligence search results would appear.`,
+        lastSeen: '1 week ago',
+        source: 'Paste Sites',
+        riskLevel: 'Medium',
+      },
+      {
+        id: 'demo-002',
+        type,
+        term,
+        bucket: 'leaks',
+        added: new Date(Date.now() - 86400000 * 30).toISOString(), // 30 days ago
+        size: 2048,
+        media: 'text',
+        contents: `Critical intelligence data found for ${term}. High-risk exposure detected in data breach.`,
+        lastSeen: '1 month ago',
+        source: 'Data Breaches',
+        riskLevel: 'High',
+      },
+      {
+        id: 'demo-003',
+        type,
+        term,
+        bucket: 'public',
+        added: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+        size: 512,
+        media: 'text',
+        contents: `Public record mentioning ${term}. Low-risk public information available.`,
+        lastSeen: '3 days ago',
+        source: 'Public Records',
+        riskLevel: 'Low',
+      }
+    ];
+
+    return {
+      results: demoData,
+      total: 3,
+      buckets: {
+        pastes: 1,
+        leaks: 1,
+        public: 1
+      }
+    };
+  }
+
   async getRecord(systemId: string, bucket: string): Promise<any> {
     try {
       const response = await fetch(`${this.config.baseUrl}/file/read`, {
