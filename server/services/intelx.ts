@@ -153,6 +153,7 @@ export class IntelXService {
   private formatResults(records: IntelXResult[], type: string): any[] {
     return records.map(record => ({
       id: record.systemid,
+      storageId: record.storageid || record.systemid,
       type,
       term: record.name,
       bucket: record.bucket,
@@ -216,6 +217,11 @@ export class IntelXService {
       console.log(`Getting record: systemId=${systemId}, bucket=${bucket}`);
       
       const proxyAgent = proxyManager.createProxyAgent();
+      
+      // For free API, the file content retrieval is limited
+      // Let's try to get a preview/summary instead of full content
+      const previewUrl = `${this.config.baseUrl}/intelligent/search/result?id=${systemId}&bucket=${bucket}&limit=1&previewlines=20`;
+      
       const fetchOptions: any = {
         method: 'GET',
         headers: {
@@ -227,56 +233,85 @@ export class IntelXService {
         fetchOptions.agent = proxyAgent;
       }
 
-      // Try different endpoints for different bucket types
-      let url: string;
-      if (bucket.includes('web.')) {
-        // For web buckets, try the file/read endpoint
-        url = `${this.config.baseUrl}/file/read?type=0&storageid=${systemId}&bucket=${bucket}`;
-      } else {
-        // For other buckets, try the file/view endpoint
-        url = `${this.config.baseUrl}/file/view?f=0&k=${this.config.apiKey}&j=&t=0&h=0&c=${systemId}&b=${bucket}`;
-      }
-
-      console.log(`Trying URL: ${url}`);
-      const response = await fetch(url, fetchOptions);
+      console.log(`Trying preview URL: ${previewUrl}`);
+      const response = await fetch(previewUrl, fetchOptions);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('IntelX record fetch error:', response.status, errorText);
+        console.error('IntelX preview fetch error:', response.status, errorText);
         
-        // Try alternative endpoint if first one fails
-        if (bucket.includes('web.')) {
-          url = `${this.config.baseUrl}/file/view?f=0&k=${this.config.apiKey}&j=&t=0&h=0&c=${systemId}&b=${bucket}`;
-        } else {
-          url = `${this.config.baseUrl}/file/read?type=0&storageid=${systemId}&bucket=${bucket}`;
+        // Return a helpful message instead of empty content
+        if (response.status === 402) {
+          return `🔒 Premium Content
+
+This record requires a premium subscription to view the full content.
+
+Record Information:
+- Type: ${bucket}
+- System ID: ${systemId}
+- Status: Available in paid version
+
+Upgrade to Premium to access:
+- Full file content
+- Advanced analysis tools
+- Unlimited downloads
+- Priority support`;
         }
         
-        console.log(`Trying alternative URL: ${url}`);
-        const retryResponse = await fetch(url, fetchOptions);
-        
-        if (!retryResponse.ok) {
-          const retryErrorText = await retryResponse.text();
-          console.error('IntelX retry fetch error:', retryResponse.status, retryErrorText);
-          
-          if (retryResponse.status === 429 || retryResponse.status === 403) {
-            console.log('Rate limited, forcing proxy rotation');
-            proxyManager.forceRotate();
-          }
-          
-          return `Content not available for this record. Error: ${retryResponse.status}`;
-        }
-        
-        const content = await retryResponse.text();
-        console.log(`Successfully retrieved content with alternative URL. Length: ${content.length}`);
-        return content;
+        return `📄 Content Preview Unavailable
+
+This record could not be retrieved:
+- Error: ${response.status}
+- Bucket: ${bucket}
+- Record ID: ${systemId}
+
+This may be due to:
+- Content requiring premium access
+- File being too large for preview
+- Temporary server limitations
+
+Try searching for other related terms or upgrade to Premium for full access.`;
       }
 
-      const content = await response.text();
-      console.log(`Successfully retrieved content. Length: ${content.length}`);
-      return content;
+      const searchData = await response.json();
+      if (searchData.records && searchData.records.length > 0) {
+        const record = searchData.records[0];
+        if (record.contents) {
+          console.log(`Successfully retrieved preview content. Length: ${record.contents.length}`);
+          return record.contents;
+        }
+      }
+
+      // If no content in preview, return informative message
+      return `📄 Record Summary
+
+Record Details:
+- Source: ${bucket}
+- Record ID: ${systemId}
+- Status: Located but content not available in free tier
+
+This record exists in the intelligence database but the full content 
+may require premium access or the file may be in a format that 
+doesn't support preview.
+
+Try searching for related terms or consider upgrading to Premium 
+for full content access and advanced features.`;
+      
     } catch (error) {
       console.error('IntelX record fetch error:', error);
-      return `Failed to fetch record content: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      return `❌ Content Retrieval Error
+
+Failed to retrieve record content:
+- Error: ${error instanceof Error ? error.message : 'Unknown error'}
+- Record ID: ${systemId}
+- Bucket: ${bucket}
+
+This could be due to:
+- Network connectivity issues
+- API rate limiting
+- Server temporarily unavailable
+
+Please try again in a few moments or contact support if the issue persists.`;
     }
   }
 }
