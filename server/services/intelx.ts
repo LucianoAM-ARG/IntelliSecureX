@@ -145,14 +145,28 @@ export class IntelXService {
       console.log(`Found ${searchData.records?.length || 0} records`);
       console.log('Search response data:', JSON.stringify(searchData, null, 2));
       
-      const formattedResults = await this.formatResultsWithPreviews(searchData.records || [], type);
-      console.log('Formatted results:', JSON.stringify(formattedResults.slice(0, 2), null, 2));
-      
-      return {
-        results: formattedResults,
-        total: searchData.statistics?.total || searchData.records?.length || 0,
-        buckets: searchData.statistics?.buckets || {},
-      };
+      console.log('About to call formatResultsWithPreviews...');
+      try {
+        const formattedResults = await this.formatResultsWithPreviews(searchData.records || [], type);
+        console.log('formatResultsWithPreviews completed successfully');
+        console.log('Formatted results:', JSON.stringify(formattedResults.slice(0, 2), null, 2));
+        
+        return {
+          results: formattedResults,
+          total: searchData.statistics?.total || searchData.records?.length || 0,
+          buckets: searchData.statistics?.buckets || {},
+        };
+      } catch (previewError) {
+        console.error('Error in formatResultsWithPreviews, falling back to basic format:', previewError);
+        const formattedResults = this.formatResults(searchData.records || [], type);
+        console.log('Fallback formatted results:', JSON.stringify(formattedResults.slice(0, 2), null, 2));
+        
+        return {
+          results: formattedResults,
+          total: searchData.statistics?.total || searchData.records?.length || 0,
+          buckets: searchData.statistics?.buckets || {},
+        };
+      }
     } catch (error) {
       console.error('IntelX search error:', error);
       throw error;
