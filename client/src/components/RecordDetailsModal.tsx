@@ -19,8 +19,8 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
   const { toast } = useToast();
 
   const { data: recordContent, isLoading } = useQuery<{ content: string; recordId: string; bucket: string }>({
-    queryKey: [`/api/record/${record?.id}/${record?.bucket}`],
-    enabled: open && !!record?.id && !!record?.bucket,
+    queryKey: [`/api/record/${record?.storageId}/${record?.bucket}`],
+    enabled: open && !!record?.storageId && !!record?.bucket,
   });
 
   if (!record) return null;
