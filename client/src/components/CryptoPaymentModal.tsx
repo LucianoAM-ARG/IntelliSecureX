@@ -202,18 +202,7 @@ export default function CryptoPaymentModal({ open, onOpenChange }: CryptoPayment
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-dark-secondary border-dark-tertiary max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-white">Upgrade to Premium</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClose}
-              className="text-slate-400 hover:text-slate-200 p-1"
-              data-testid="button-close-modal"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-white">Upgrade to Premium</DialogTitle>
         </DialogHeader>
 
         {step === 'select' && (

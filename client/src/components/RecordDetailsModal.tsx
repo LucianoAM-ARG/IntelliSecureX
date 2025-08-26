@@ -56,20 +56,10 @@ export default function RecordDetailsModal({ open, onOpenChange, record }: Recor
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] bg-dark-secondary border-dark-tertiary overflow-hidden">
         <DialogHeader className="space-y-3">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Record Details
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-muted-foreground hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-xl font-semibold text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-primary" />
+            Record Details
+          </DialogTitle>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-dark-primary rounded-lg">
             <div className="flex items-center gap-2">

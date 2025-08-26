@@ -37,18 +37,7 @@ export default function UpgradeModal({ open, onOpenChange }: UpgradeModalProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-dark-secondary border-dark-tertiary max-w-md">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-white">Upgrade to Premium</DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-slate-400 hover:text-slate-200 p-1"
-              data-testid="button-close-modal"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+          <DialogTitle className="text-white">Upgrade to Premium</DialogTitle>
         </DialogHeader>
 
         <div className="text-center mb-6">
