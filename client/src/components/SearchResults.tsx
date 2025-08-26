@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Globe, Mail, Server, Fingerprint, ExternalLink, Download, Shield, Bell, Crown, Search } from "lucide-react";
 import { useState } from "react";
 import CryptoPaymentModal from "./CryptoPaymentModal";
+import RecordDetailsModal from "./RecordDetailsModal";
 
 interface SearchResultsProps {
   results: any;
@@ -31,6 +32,8 @@ const getRiskColor = (risk: string) => {
 
 export default function SearchResults({ results, isLoading }: SearchResultsProps) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -125,6 +128,12 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                             <span data-testid={`text-result-size-${index}`}>{result.size} bytes</span>
                           </p>
                         )}
+                        {result.preview && (
+                          <div className="mt-2 p-2 bg-dark-tertiary rounded text-xs text-foreground/70 font-mono">
+                            <span className="text-muted-foreground">Preview:</span>
+                            <div className="mt-1 whitespace-pre-wrap">{result.preview}</div>
+                          </div>
+                        )}
                       </div>
                       
                       <div className="flex items-center space-x-3">
@@ -133,6 +142,10 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
                           size="sm"
                           className="text-primary hover:text-primary/80 p-0"
                           data-testid={`button-view-details-${index}`}
+                          onClick={() => {
+                            setSelectedRecord(result);
+                            setShowDetailsModal(true);
+                          }}
                         >
                           <ExternalLink className="w-4 h-4 mr-1" />
                           View Details
@@ -209,6 +222,12 @@ export default function SearchResults({ results, isLoading }: SearchResultsProps
       <CryptoPaymentModal 
         open={showUpgradeModal} 
         onOpenChange={setShowUpgradeModal} 
+      />
+      
+      <RecordDetailsModal
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
+        record={selectedRecord}
       />
     </>
   );

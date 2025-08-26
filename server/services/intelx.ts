@@ -156,10 +156,19 @@ export class IntelXService {
       size: record.size,
       media: record.media,
       contents: record.contents,
+      preview: this.extractPreview(record.contents || ''),
       lastSeen: this.formatDate(record.added),
       source: this.formatSource(record.bucket),
       riskLevel: this.calculateRiskLevel(record.bucket, type),
     }));
+  }
+
+  private extractPreview(content: string): string {
+    if (!content) return '';
+    
+    // Extract first 150 characters for preview
+    const preview = content.substring(0, 150);
+    return preview + (content.length > 150 ? '...' : '');
   }
 
   private formatDate(dateString: string): string {
@@ -200,7 +209,8 @@ export class IntelXService {
 
   async getRecord(systemId: string, bucket: string): Promise<any> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/file/read`, {
+      const proxyAgent = proxyManager.createProxyAgent();
+      const fetchOptions: any = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -211,10 +221,24 @@ export class IntelXService {
           systemid: systemId,
           bucket,
         }),
-      });
+      };
+
+      if (proxyAgent) {
+        fetchOptions.agent = proxyAgent;
+      }
+
+      const response = await fetch(`${this.config.baseUrl}/file/read`, fetchOptions);
 
       if (!response.ok) {
-        throw new Error(`IntelX API error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('IntelX record fetch error:', response.status, errorText);
+        
+        if (response.status === 429 || response.status === 403) {
+          console.log('Rate limited, forcing proxy rotation');
+          proxyManager.forceRotate();
+        }
+        
+        throw new Error(`IntelX API error: ${response.status} - ${errorText}`);
       }
 
       return await response.text();

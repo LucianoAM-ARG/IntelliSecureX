@@ -237,6 +237,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get record details
+  app.get('/api/record/:recordId', requireAuth, async (req: any, res) => {
+    try {
+      const { recordId } = req.params;
+      const { bucket } = req.query;
+      
+      if (!recordId || !bucket) {
+        return res.status(400).json({ message: "Record ID and bucket are required" });
+      }
+
+      console.log(`Fetching record details for ID: ${recordId}, bucket: ${bucket}`);
+      const recordContent = await intelxService.getRecord(recordId, bucket as string);
+      
+      res.json({
+        content: recordContent,
+        recordId,
+        bucket
+      });
+    } catch (error) {
+      console.error("Error fetching record:", error);
+      res.status(500).json({ message: "Failed to fetch record details" });
+    }
+  });
+
   // Verify Telegram payment
   app.post('/api/telegram/verify-payment', requireAuth, async (req: any, res) => {
     try {
